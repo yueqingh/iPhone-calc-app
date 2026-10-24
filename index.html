@@ -9,7 +9,7 @@
 <meta name="apple-mobile-web-app-title" content="计算器">
 <meta name="format-detection" content="telephone=no">
 <meta name="theme-color" content="#0f1115">
-<meta name="app-version" content="1.0.0">
+<meta name="app-version" content="1.2.0">
 <title>计算器</title>
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
@@ -46,29 +46,28 @@ button{font-family:inherit;touch-action:manipulation;-webkit-user-select:none;us
   background:var(--key-fn);color:var(--fg);font-size:15px;white-space:nowrap
 }
 .bar-btn.diag{background:var(--accent2);color:var(--accent2-fg);border-color:transparent;font-weight:600}
-.ver{font-size:12px;color:var(--muted)}
+.bar-left{display:flex;gap:8px}
+.ver{position:absolute;left:4px;top:4px;font-size:12px;color:var(--muted)}
 
 .display{
-  position:relative;flex:1;min-height:96px;display:flex;flex-direction:column;
-  justify-content:flex-end;align-items:flex-end;padding:8px 4px 12px;min-width:0
+  position:relative;flex:1;min-height:96px;display:flex;flex-direction:column;overflow:hidden;
+  justify-content:flex-end;align-items:flex-end;padding:22px 4px 10px;min-width:0
 }
-.sub{min-height:26px;font-size:20px;color:var(--muted);max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
-  -webkit-user-select:text;user-select:text}
+.sub{
+  min-height:24px;font-size:18px;color:var(--muted);max-width:100%;text-align:right;white-space:normal;
+  overflow-wrap:anywhere;-webkit-user-select:text;user-select:text
+}
 .sub.err{color:var(--danger)}
 .main{
-  max-width:100%;font-size:64px;font-weight:300;line-height:1.15;white-space:nowrap;overflow-x:auto;
-  font-variant-numeric:tabular-nums;scrollbar-width:none;-webkit-user-select:text;user-select:text
+  max-width:100%;font-size:64px;font-weight:300;line-height:1.15;text-align:right;white-space:normal;
+  overflow-wrap:normal;overflow-x:hidden;overflow-y:hidden;font-variant-numeric:tabular-nums;
+  -webkit-user-select:text;user-select:text
 }
-.main::-webkit-scrollbar{display:none}
-.del{
-  position:absolute;left:0;top:6px;width:48px;height:40px;border-radius:12px;border:0;
-  background:transparent;color:var(--muted);font-size:24px
-}
-.del:active{background:var(--key-fn)}
+.main.crush{overflow-wrap:anywhere}
 
 .keys{
-  display:grid;grid-template-columns:repeat(4,1fr);grid-template-rows:repeat(5,1fr);gap:10px;
-  height:min(60vh,118vw);height:min(60dvh,118vw)
+  display:grid;grid-template-columns:repeat(4,1fr);grid-template-rows:repeat(6,1fr);gap:10px;
+  height:min(64vh,140vw);height:min(64dvh,140vw)
 }
 .key{
   border:0;border-radius:18px;font-size:clamp(22px,6.4vw,30px);background:var(--key);color:var(--fg);
@@ -77,7 +76,8 @@ button{font-family:inherit;touch-action:manipulation;-webkit-user-select:none;us
 .key:active{transform:scale(.96);filter:brightness(1.3)}
 .key.fn{background:var(--key-fn)}
 .key.op{background:var(--key-op)}
-.key.eq{background:var(--accent);color:var(--accent-fg);font-weight:600}
+.key.eq{background:var(--accent);color:var(--accent-fg);font-weight:600;grid-column:1 / -1}
+.key svg{width:1.1em;height:1.1em;vertical-align:middle}
 
 .backdrop{position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,.5);z-index:10}
 .sheet{
@@ -91,15 +91,43 @@ button{font-family:inherit;touch-action:manipulation;-webkit-user-select:none;us
 }
 .sheet-head{display:flex;align-items:center;justify-content:space-between;padding:12px 14px;border-bottom:1px solid var(--line)}
 .sheet-list{flex:1;margin:0;padding:0;list-style:none;overflow-y:auto;-webkit-overflow-scrolling:touch}
-.h-item{
-  display:block;width:100%;text-align:right;background:none;border:0;border-bottom:1px solid var(--line);
-  color:var(--fg);padding:12px 18px
-}
+.h-li{border-bottom:1px solid var(--line);padding:4px 18px 0}
+.h-top{display:flex;align-items:center;justify-content:space-between;min-height:38px}
+.h-nb{min-height:34px;padding:0 12px;border-radius:17px;border:1px solid var(--line);background:var(--key-fn);color:var(--fg);font-size:13px}
+.h-note{text-align:right;color:var(--accent2);font-size:15px;word-break:break-all;padding:0 0 4px}
+.h-item{display:block;width:100%;text-align:right;background:none;border:0;color:var(--fg);padding:4px 0 12px}
 .h-item:active{background:var(--key-fn)}
-.h-t{display:block;font-size:12px;color:var(--muted)}
+.h-t{font-size:12px;color:var(--muted)}
+.h-search{padding:8px 14px;border-bottom:1px solid var(--line)}
+.h-search input{width:100%;height:38px;border-radius:19px;border:1px solid var(--line);background:var(--bg);color:var(--fg);padding:0 14px;font-size:16px}
+.notebar{margin-top:6px;max-width:100%}
+.note-btn{min-height:34px;max-width:100%;padding:0 12px;border-radius:17px;border:1px dashed var(--accent2);background:transparent;color:var(--accent2);font-size:14px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.note-btn.has{border-style:solid;background:var(--key-fn);color:var(--fg)}
+.backdrop.nb{z-index:24}
+.notedlg{
+  position:fixed;left:12px;right:12px;top:calc(env(safe-area-inset-top) + 64px);max-width:456px;margin:0 auto;z-index:25;
+  background:var(--sheet);color:var(--fg);border-radius:16px;padding:14px;display:flex;flex-direction:column;gap:10px;
+  box-shadow:0 10px 40px rgba(0,0,0,.45)
+}
+.nd-ctx{font-size:14px;color:var(--muted);word-break:break-all;line-height:1.4}
+.notedlg input{width:100%;height:44px;border-radius:12px;border:1px solid var(--line);background:var(--bg);color:var(--fg);padding:0 12px;font-size:17px}
+.nd-count{font-size:12px;color:var(--muted);text-align:right;margin-top:-4px}
+.nd-count.over{color:var(--danger)}
+.nd-row{display:flex;gap:8px;align-items:center}
+.nd-row .grow{flex:1}
 .h-e{display:block;font-size:15px;color:var(--muted);word-break:break-all}
 .h-r{display:block;font-size:28px;font-weight:300;word-break:break-all}
 .h-empty{padding:40px 16px;text-align:center;color:var(--muted)}
+.sheet.sheet-sm{height:auto;max-height:80dvh}
+.set-body{padding:6px 16px 18px;overflow-y:auto}
+.set-row{display:flex;align-items:center;justify-content:space-between;gap:14px;padding:14px 0;border-bottom:1px solid var(--line)}
+.set-t{font-size:17px}
+.set-d{font-size:13px;color:var(--muted);margin-top:4px;line-height:1.4}
+.set-note{font-size:13px;color:var(--muted);margin-top:14px;line-height:1.5}
+.switch{width:52px;height:32px;border-radius:16px;border:0;background:var(--key-fn);position:relative;flex:none;transition:background .15s}
+.switch::after{content:'';position:absolute;top:3px;left:3px;width:26px;height:26px;border-radius:50%;background:#fff;transition:transform .15s;box-shadow:0 1px 3px rgba(0,0,0,.3)}
+.switch[aria-checked="true"]{background:var(--accent2)}
+.switch[aria-checked="true"]::after{transform:translateX(20px)}
 
 #toast{
   position:fixed;left:50%;top:calc(env(safe-area-inset-top) + 58px);transform:translateX(-50%);z-index:50;
@@ -118,41 +146,46 @@ button{font-family:inherit;touch-action:manipulation;-webkit-user-select:none;us
 <body>
 <div class="app" id="app">
   <header class="bar">
-    <button type="button" class="bar-btn" id="btnHistory">历史</button>
-    <span class="ver" id="ver"></span>
+    <div class="bar-left">
+      <button type="button" class="bar-btn" id="btnHistory">历史</button>
+      <button type="button" class="bar-btn" id="btnSettings">设置</button>
+    </div>
     <button type="button" class="bar-btn diag" id="btnDiag">复制诊断报告</button>
   </header>
 
   <main class="display" id="display">
-    <button type="button" class="del" data-k="del" aria-label="退格">⌫</button>
+    <span class="ver" id="ver"></span>
     <div class="sub" id="sub"></div>
     <div class="main" id="main">0</div>
+    <div class="notebar" id="notebar" hidden><button type="button" class="note-btn" id="btnNote">＋ 备注</button></div>
   </main>
 
   <section class="keys" id="keys" aria-label="计算器按键">
     <button type="button" class="key fn" data-k="ac" aria-label="全部清除">AC</button>
+    <button type="button" class="key fn" data-k="del" aria-label="退格删除"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 5H9l-6 7 6 7h12a1 1 0 0 0 1-1V6a1 1 0 0 0-1-1z"/><path d="M17 9.5l-5 5M12 9.5l5 5"/></svg></button>
     <button type="button" class="key fn" data-k="paren" aria-label="括号">( )</button>
     <button type="button" class="key fn" data-k="%" aria-label="百分号">%</button>
-    <button type="button" class="key op" data-k="÷" aria-label="除">÷</button>
 
     <button type="button" class="key" data-k="7">7</button>
     <button type="button" class="key" data-k="8">8</button>
     <button type="button" class="key" data-k="9">9</button>
-    <button type="button" class="key op" data-k="×" aria-label="乘">×</button>
+    <button type="button" class="key op" data-k="÷" aria-label="除">÷</button>
 
     <button type="button" class="key" data-k="4">4</button>
     <button type="button" class="key" data-k="5">5</button>
     <button type="button" class="key" data-k="6">6</button>
-    <button type="button" class="key op" data-k="−" aria-label="减">−</button>
+    <button type="button" class="key op" data-k="×" aria-label="乘">×</button>
 
     <button type="button" class="key" data-k="1">1</button>
     <button type="button" class="key" data-k="2">2</button>
     <button type="button" class="key" data-k="3">3</button>
-    <button type="button" class="key op" data-k="+" aria-label="加">+</button>
+    <button type="button" class="key op" data-k="−" aria-label="减">−</button>
 
     <button type="button" class="key fn" data-k="neg" aria-label="正负号">±</button>
     <button type="button" class="key" data-k="0">0</button>
     <button type="button" class="key" data-k="." aria-label="小数点">.</button>
+    <button type="button" class="key op" data-k="+" aria-label="加">+</button>
+
     <button type="button" class="key eq" data-k="=" aria-label="等于">=</button>
   </section>
 </div>
@@ -164,7 +197,44 @@ button{font-family:inherit;touch-action:manipulation;-webkit-user-select:none;us
     <strong>历史记录</strong>
     <button type="button" class="bar-btn" id="btnClose">关闭</button>
   </div>
+  <div class="h-search"><input id="hSearch" type="search" placeholder="搜索备注、算式或结果" aria-label="搜索历史" enterkeyhint="search" autocomplete="off" autocapitalize="off" spellcheck="false"></div>
   <ul class="sheet-list" id="hlist"></ul>
+</section>
+
+<div id="noteBackdrop" class="backdrop nb" hidden></div>
+<section id="noteDlg" class="notedlg" role="dialog" aria-modal="true" aria-label="备注" hidden>
+  <div class="nd-ctx" id="ndCtx"></div>
+  <input id="ndInput" type="text" placeholder="写点备注，比如：房租" aria-label="备注内容" enterkeyhint="done" autocomplete="off" autocapitalize="off" spellcheck="false">
+  <div class="nd-count" id="ndCount">0/30</div>
+  <div class="nd-row">
+    <button type="button" class="bar-btn" id="ndDel" hidden>删除备注</button>
+    <span class="grow"></span>
+    <button type="button" class="bar-btn" id="ndCancel">取消</button>
+    <button type="button" class="bar-btn diag" id="ndSave">保存</button>
+  </div>
+</section>
+
+<section id="setSheet" class="sheet sheet-sm" role="dialog" aria-modal="true" aria-label="设置" hidden>
+  <div class="sheet-head">
+    <span style="width:64px"></span>
+    <strong>设置</strong>
+    <button type="button" class="bar-btn" id="btnSetClose">完成</button>
+  </div>
+  <div class="set-body">
+    <div class="set-row">
+      <div><div class="set-t">按键音</div><div class="set-d">手机侧面的静音开关拨到静音时没有声音，这是 iPhone 的规定。</div></div>
+      <button type="button" role="switch" aria-checked="true" aria-label="按键音" class="switch" id="swSound"></button>
+    </div>
+    <div class="set-row">
+      <div><div class="set-t">按键震动</div><div class="set-d">借用 iPhone 系统自带的轻触反馈，部分系统版本可能没有效果。</div></div>
+      <button type="button" role="switch" aria-checked="true" aria-label="按键震动" class="switch" id="swHaptic"></button>
+    </div>
+    <div class="set-row">
+      <div><div class="set-t">导出历史和备注</div><div class="set-d">复制成一段文字，可粘贴到备忘录保存。删掉主屏幕图标或换手机，记录会丢失。</div></div>
+      <button type="button" class="bar-btn" id="btnExport">复制</button>
+    </div>
+    <div class="set-note" id="setInfo"></div>
+  </div>
 </section>
 
 <div id="toast" role="status" aria-live="polite"></div>
@@ -174,7 +244,7 @@ button{font-family:inherit;touch-action:manipulation;-webkit-user-select:none;us
 <script>
 (function () {
   'use strict';
-  var VERSION = '1.0.0';
+  var VERSION = '1.2.0';
   var APP = '计算器';
   var MAX_LOG = 200, MAX_ACT = 60, MAX_ERR = 20;
   var STORE_KEY = 'calc.diag.v1';
@@ -407,7 +477,7 @@ button{font-family:inherit;touch-action:manipulation;-webkit-user-select:none;us
         }
       } else { L.push('- 上次运行没有记录到错误。'); }
       L.push('');
-      L.push('已脱敏字段：密钥/token/密码/cookie 类内容、邮箱、手机号、网址参数。算式与数字按原样保留（需要它们来复现计算问题）。不记录任何网络请求/响应内容。');
+      L.push('已脱敏字段：密钥/token/密码/cookie 类内容、邮箱、手机号、网址参数。算式与数字按原样保留（需要它们来复现计算问题）。备注内容不会出现在报告里，只统计条数。不记录任何网络请求/响应内容。');
       return L.join('\n');
     } catch (e) {
       selfErrors++;
@@ -451,12 +521,12 @@ button{font-family:inherit;touch-action:manipulation;-webkit-user-select:none;us
     } catch (e) { /* 走降级 */ }
     fallback('无 clipboard API 或非安全环境');
   }
-  function showModal(text) {
+  function showModal(text, hint) {
     try {
       var old = document.getElementById('diagModal'); if (old) old.parentNode.removeChild(old);
       var m = document.createElement('div'); m.id = 'diagModal'; m.className = 'modal';
       var box = document.createElement('div'); box.className = 'modal-box';
-      var p = document.createElement('p'); p.textContent = '自动复制没成功。请点“全选”，再点弹出的“拷贝”，然后粘贴给 Claude。';
+      var p = document.createElement('p'); p.textContent = hint || '自动复制没成功。请点“全选”，再点弹出的“拷贝”，然后粘贴给 Claude。';
       var ta = document.createElement('textarea'); ta.value = text; ta.readOnly = true;
       var row = document.createElement('div'); row.className = 'modal-row';
       var b1 = document.createElement('button'); b1.type = 'button'; b1.className = 'bar-btn diag'; b1.textContent = '全选';
@@ -482,13 +552,25 @@ button{font-family:inherit;touch-action:manipulation;-webkit-user-select:none;us
     } catch (e) { selfErrors++; showModal('诊断按钮自身出错: ' + safeStr(e)); }
   }
 
+  /* 通用“复制文字”：剪贴板 → execCommand → 手动全选弹窗。内容不写入日志。 */
+  function share(text, okMsg, hint) {
+    try {
+      copyText(text, function (how) {
+        try {
+          if (how) { log('INFO', 'diag', '文字已复制（' + how + '）' + text.length + ' 字符'); toast(okMsg); }
+          else showModal(text, hint);
+        } catch (e) { selfErrors++; }
+      });
+    } catch (e) { selfErrors++; showModal(text, hint); }
+  }
+
   try {
     var v = document.getElementById('ver'); if (v) v.textContent = 'v' + VERSION;
     var bd = document.getElementById('btnDiag'); if (bd) bd.addEventListener('click', onDiagClick);
   } catch (e) { selfErrors++; }
 
   window.Diag = {
-    VERSION: VERSION, log: log, action: action, toast: toast, report: buildReport, copy: copyText,
+    VERSION: VERSION, log: log, action: action, toast: toast, report: buildReport, copy: copyText, share: share,
     setSnapshot: function (fn) { snapshotFn = fn; },
     setSW: function (s) { swState = s; },
     _selfErrors: function () { return selfErrors; }
@@ -790,34 +872,65 @@ button{font-family:inherit;touch-action:manipulation;-webkit-user-select:none;us
   /* ENGINE-END */
 
   /* ============ 界面 ============ */
-  var mainEl = $('main'), subEl = $('sub');
+  var mainEl = $('main'), subEl = $('sub'), notebar = $('notebar'), btnNote = $('btnNote');
   var st = { expr: '', fresh: false, err: '', sub: '', entry: null, detail: '' };
   var history = [];
   var HKEY = 'calc.history.v1', HMAX = 100;
 
+  var HHARD = 1000, NOTE_MAX = 30, idSeq = 0, curId = null;
+  function newId() { return Date.now().toString(36) + (idSeq++).toString(36); }
+  function clipNote(v) { return Array.from(String(v)).slice(0, NOTE_MAX).join(''); }
+  function findById(id) { for (var i = 0; i < history.length; i++) if (history[i].id === id) return history[i]; return null; }
+  function noteCount() { var n = 0; for (var i = 0; i < history.length; i++) if (history[i].n) n++; return n; }
   function validEntry(h) { return h && typeof h.e === 'string' && typeof h.r === 'string' && /^[\d.+−×÷()%\-]+$/.test(h.e); }
   function loadHistory() {
     try {
-      var raw = localStorage.getItem(HKEY);
-      if (raw) { var a = JSON.parse(raw); if (Array.isArray(a)) history = a.filter(validEntry).slice(0, HMAX); }
-      Diag.log('INFO', 'app', '历史记录已读取 ' + history.length + ' 条');
+      var raw = localStorage.getItem(HKEY), fixed = false;
+      if (raw) {
+        var a = JSON.parse(raw);
+        if (Array.isArray(a)) {
+          history = a.filter(validEntry).slice(0, HHARD);
+          history.forEach(function (h) {
+            if (!h.id) { h.id = newId(); fixed = true; }
+            if (typeof h.n === 'string' && h.n.trim() !== '') h.n = clipNote(h.n.trim()); else if ('n' in h) { delete h.n; fixed = true; }
+          });
+        }
+      }
+      if (fixed) saveHistory();
+      Diag.log('INFO', 'app', '历史记录已读取 ' + history.length + ' 条（带备注 ' + noteCount() + ' 条）');
     } catch (e) { history = []; Diag.log('WARN', 'app', '读取历史记录失败: ' + e); }
   }
   function saveHistory() {
     try { localStorage.setItem(HKEY, JSON.stringify(history)); }
     catch (e) { Diag.log('WARN', 'app', '保存历史记录失败: ' + e); }
   }
+  /* 没备注的只保留最新 HMAX 条；带备注的不受这个上限限制（总量上限 HHARD 保护存储空间） */
   function addHistory(entry) {
-    history.unshift({ e: entry.e, r: entry.r, t: Date.now() });
-    if (history.length > HMAX) history.length = HMAX;
+    var h = { id: newId(), e: entry.e, r: entry.r, t: Date.now() };
+    history.unshift(h);
+    var plain = 0;
+    history = history.filter(function (x) { return x.n ? true : ++plain <= HMAX; });
+    if (history.length > HHARD) history.length = HHARD;
     saveHistory();
+    return h;
   }
 
+  /* 算式自动换行，并逐步缩小字号，直到整个算式都能在显示区里看全；极端情况下才允许上下滚动 */
+  var MIN_FONT = 16;
   function fit() {
-    var el = mainEl; el.style.fontSize = '';
-    var size = parseFloat(getComputedStyle(el).fontSize) || 64;
-    while (el.scrollWidth > el.clientWidth + 1 && size > 30) { size -= 2; el.style.fontSize = size + 'px'; }
-    el.scrollLeft = el.scrollWidth;
+    var el = mainEl, box = $('display');
+    el.style.fontSize = ''; el.style.maxHeight = ''; el.style.overflowY = 'hidden'; el.classList.remove('crush');
+    var base = parseFloat(getComputedStyle(el).fontSize) || 64, size = base;
+    var cs = getComputedStyle(box);
+    var noteH = notebar.hidden ? 0 : notebar.offsetHeight + 6;
+    var avail = box.clientHeight - (parseFloat(cs.paddingTop) || 0) - (parseFloat(cs.paddingBottom) || 0) - subEl.offsetHeight - noteH;
+    function over() { return el.scrollHeight > avail + 1 || el.scrollWidth > el.clientWidth + 1; }
+    while (over() && size > MIN_FONT) { size -= 2; el.style.fontSize = size + 'px'; }
+    if (over()) {
+      el.classList.add('crush'); el.style.maxHeight = Math.max(avail, 40) + 'px'; el.style.overflowY = 'auto';
+      el.scrollTop = el.scrollHeight;
+      if (!fit.warned) { fit.warned = true; Diag.log('WARN', 'ui', '算式太长，已启用滚动显示 字数=' + st.expr.length + ' 可用高度=' + Math.round(avail)); }
+    }
   }
   function render() {
     try {
@@ -827,12 +940,16 @@ button{font-family:inherit;touch-action:manipulation;-webkit-user-select:none;us
       else if (st.fresh) sub = st.sub;
       else { var pv = Engine.preview(st.expr); if (pv !== null) sub = '= ' + pv; }
       subEl.textContent = sub; subEl.className = cls;
+      var ch = (st.fresh && curId) ? findById(curId) : null;
+      if (ch) { notebar.hidden = false; btnNote.textContent = ch.n ? '备注：' + ch.n : '＋ 备注'; btnNote.className = 'note-btn' + (ch.n ? ' has' : ''); }
+      else notebar.hidden = true;
       fit();
     } catch (e) { Diag.log('ERROR', 'ui', '界面刷新失败: ' + e, e && e.stack); }
   }
   function apply(next, label) {
     var before = st.expr;
-    if (next.entry) { addHistory(next.entry); Diag.log('INFO', 'calc', '计算 ' + next.entry.e + ' = ' + next.entry.r); }
+    if (next.entry) { var he = addHistory(next.entry); curId = he.id; Diag.log('INFO', 'calc', '计算 ' + next.entry.e + ' = ' + next.entry.r); }
+    else if (!next.fresh) curId = null;
     if (next.err) {
       if (next.detail) Diag.log('ERROR', 'calc', '内部计算错误 [' + next.expr + ']: ' + next.detail);
       else Diag.log('WARN', 'calc', '计算提示「' + next.err + '」算式 ' + next.expr);
@@ -845,73 +962,249 @@ button{font-family:inherit;touch-action:manipulation;-webkit-user-select:none;us
     catch (e) { Diag.log('ERROR', 'ui', '按键处理失败 ' + k + ': ' + e, e && e.stack); }
   }
 
+  /* ===== 设置、按键音、震动 ===== */
+  var SKEY = 'calc.settings.v1';
+  var settings = { sound: true, haptic: true };
+  function loadSettings() {
+    try {
+      var raw = localStorage.getItem(SKEY);
+      if (raw) { var o = JSON.parse(raw); if (o && typeof o === 'object') { settings.sound = o.sound !== false; settings.haptic = o.haptic !== false; } }
+    } catch (e) { Diag.log('WARN', 'app', '读取设置失败: ' + e); }
+  }
+  function saveSettings() {
+    try { localStorage.setItem(SKEY, JSON.stringify(settings)); } catch (e) { Diag.log('WARN', 'app', '保存设置失败: ' + e); }
+  }
+
+  var Sound = {
+    ctx: null, failed: false,
+    ensure: function () {
+      if (this.failed) return false;
+      try {
+        if (!this.ctx) {
+          var AC = window.AudioContext || window.webkitAudioContext;
+          if (!AC) { this.failed = true; Diag.log('WARN', 'sound', '浏览器不支持 Web Audio'); return false; }
+          try { if (navigator.audioSession) navigator.audioSession.type = 'ambient'; } catch (e0) { /* 可选功能 */ }
+          this.ctx = new AC();
+          Diag.log('INFO', 'sound', '音频已初始化 state=' + this.ctx.state);
+        }
+        if (this.ctx.state === 'suspended') this.ctx.resume();
+        return true;
+      } catch (e) { this.failed = true; Diag.log('ERROR', 'sound', '音频初始化失败: ' + e, e && e.stack); return false; }
+    },
+    tick: function (k) {
+      if (!this.ensure()) return;
+      var f = 1100, c = this.ctx, t = c.currentTime;
+      if (k === 'ac') f = 520; else if (k === 'del') f = 700; else if (k === '=') f = 1500;
+      else if ('+−×÷%'.indexOf(k) >= 0 || k === 'paren' || k === 'neg') f = 880;
+      var o = c.createOscillator(), g = c.createGain();
+      o.type = 'sine'; o.frequency.setValueAtTime(f, t); o.frequency.exponentialRampToValueAtTime(f * 0.6, t + 0.045);
+      g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(0.22, t + 0.004); g.gain.exponentialRampToValueAtTime(0.0001, t + 0.06);
+      o.connect(g); g.connect(c.destination); o.start(t); o.stop(t + 0.07);
+    }
+  };
+  var Haptic = {
+    mode: 'none', label: null, init: function () {
+      try {
+        if (typeof navigator.vibrate === 'function') { this.mode = 'vibrate'; return; }
+        var lab = document.createElement('label'), inp = document.createElement('input');
+        inp.type = 'checkbox'; inp.setAttribute('switch', ''); inp.tabIndex = -1; inp.setAttribute('aria-hidden', 'true');
+        lab.setAttribute('aria-hidden', 'true');
+        lab.style.cssText = 'position:fixed;left:0;top:0;width:1px;height:1px;opacity:0;overflow:hidden;pointer-events:none;';
+        lab.appendChild(inp); document.body.appendChild(lab);
+        this.label = lab; this.mode = 'switch';
+      } catch (e) { this.mode = 'none'; Diag.log('WARN', 'haptic', '震动初始化失败: ' + e); }
+    },
+    tap: function () {
+      if (this.mode === 'vibrate') navigator.vibrate(8);
+      else if (this.mode === 'switch' && this.label) this.label.click();
+    }
+  };
+  function feedback(k) {
+    try { if (settings.sound) Sound.tick(k); } catch (e) { Diag.log('ERROR', 'sound', '按键音出错: ' + e, e && e.stack); }
+    try { if (settings.haptic) Haptic.tap(); } catch (e2) { Diag.log('ERROR', 'haptic', '震动出错: ' + e2, e2 && e2.stack); }
+  }
+
+  var setSheet = $('setSheet'), swSound = $('swSound'), swHaptic = $('swHaptic');
+  function renderSettings() {
+    swSound.setAttribute('aria-checked', settings.sound ? 'true' : 'false');
+    swHaptic.setAttribute('aria-checked', settings.haptic ? 'true' : 'false');
+    $('setInfo').textContent = '版本 v' + Diag.VERSION + ' · 震动方式：' +
+      (Haptic.mode === 'vibrate' ? '系统震动' : Haptic.mode === 'switch' ? '系统轻触反馈（iOS）' : '不可用');
+  }
+  swSound.addEventListener('click', function () {
+    try {
+      settings.sound = !settings.sound; saveSettings(); renderSettings();
+      Diag.action('按键音 ' + (settings.sound ? '开' : '关')); Diag.log('INFO', 'ui', '按键音 ' + (settings.sound ? '开' : '关'));
+      if (settings.sound) Sound.tick('1');
+    } catch (e) { Diag.log('ERROR', 'ui', '切换按键音失败: ' + e, e && e.stack); }
+  });
+  swHaptic.addEventListener('click', function () {
+    try {
+      settings.haptic = !settings.haptic; saveSettings(); renderSettings();
+      Diag.action('按键震动 ' + (settings.haptic ? '开' : '关')); Diag.log('INFO', 'ui', '按键震动 ' + (settings.haptic ? '开' : '关'));
+      if (settings.haptic) Haptic.tap();
+    } catch (e) { Diag.log('ERROR', 'ui', '切换震动失败: ' + e, e && e.stack); }
+  });
+
   /* 历史面板 */
-  var sheet = $('sheet'), backdrop = $('backdrop'), hlist = $('hlist'), btnClear = $('btnClear');
+  var sheet = $('sheet'), backdrop = $('backdrop'), hlist = $('hlist'), btnClear = $('btnClear'), hSearch = $('hSearch');
   var clearArmed = false, clearTimer = null;
   function two(n) { return n < 10 ? '0' + n : '' + n; }
   function fmtTime(t) { var d = new Date(t); return two(d.getMonth() + 1) + '-' + two(d.getDate()) + ' ' + two(d.getHours()) + ':' + two(d.getMinutes()); }
+  function matches(h, q) {
+    if (!q) return true;
+    q = q.toLowerCase();
+    return (h.n && h.n.toLowerCase().indexOf(q) >= 0) || h.e.indexOf(q) >= 0 || h.r.indexOf(q) >= 0 || Engine.pretty(h.e).replace(/ /g, '').indexOf(q) >= 0;
+  }
   function renderHistory() {
+    var keep = hlist.scrollTop, q = hSearch.value.trim(), shown = 0;
     hlist.innerHTML = '';
-    if (!history.length) {
-      var li0 = document.createElement('li'); li0.className = 'h-empty'; li0.textContent = '还没有计算记录'; hlist.appendChild(li0); return;
-    }
-    history.forEach(function (h, i) {
-      var li = document.createElement('li'), b = document.createElement('button');
-      b.type = 'button'; b.className = 'h-item'; b.setAttribute('data-i', String(i));
+    history.forEach(function (h) {
+      if (!matches(h, q)) return;
+      shown++;
+      var li = document.createElement('li'); li.className = 'h-li';
+      var top = document.createElement('div'); top.className = 'h-top';
       var t = document.createElement('span'); t.className = 'h-t'; t.textContent = fmtTime(h.t || 0);
+      var nb = document.createElement('button'); nb.type = 'button'; nb.className = 'h-nb'; nb.setAttribute('data-n', h.id); nb.textContent = h.n ? '改备注' : '＋ 备注';
+      top.appendChild(t); top.appendChild(nb); li.appendChild(top);
+      if (h.n) { var nn = document.createElement('div'); nn.className = 'h-note'; nn.textContent = h.n; li.appendChild(nn); }
+      var b = document.createElement('button'); b.type = 'button'; b.className = 'h-item'; b.setAttribute('data-id', h.id);
       var e = document.createElement('span'); e.className = 'h-e'; e.textContent = Engine.pretty(h.e) + ' =';
       var r = document.createElement('span'); r.className = 'h-r'; r.textContent = h.r;
-      b.appendChild(t); b.appendChild(e); b.appendChild(r); li.appendChild(b); hlist.appendChild(li);
+      b.appendChild(e); b.appendChild(r); li.appendChild(b); hlist.appendChild(li);
     });
+    if (!shown) {
+      var li0 = document.createElement('li'); li0.className = 'h-empty';
+      li0.textContent = history.length ? '没有匹配的记录' : '还没有计算记录'; hlist.appendChild(li0);
+    }
+    hlist.scrollTop = keep;
   }
   function resetClear() { clearArmed = false; clearTimeout(clearTimer); btnClear.textContent = '清空'; }
   function openSheet() {
     try {
-      Diag.action('打开历史'); Diag.log('INFO', 'ui', '打开历史面板（' + history.length + ' 条）');
-      renderHistory(); sheet.hidden = false; backdrop.hidden = false; hlist.scrollTop = 0;
+      Diag.action('打开历史'); Diag.log('INFO', 'ui', '打开历史面板（' + history.length + ' 条，带备注 ' + noteCount() + ' 条）');
+      hSearch.value = ''; hlist.scrollTop = 0; renderHistory(); sheet.hidden = false; backdrop.hidden = false;
     } catch (e) { Diag.log('ERROR', 'ui', '打开历史失败: ' + e, e && e.stack); }
   }
-  function closeSheet() { sheet.hidden = true; backdrop.hidden = true; resetClear(); }
+  function closeSheet() { sheet.hidden = true; setSheet.hidden = true; backdrop.hidden = true; resetClear(); }
+  function openSettings() {
+    try {
+      Diag.action('打开设置'); renderSettings(); setSheet.hidden = false; backdrop.hidden = false;
+    } catch (e) { Diag.log('ERROR', 'ui', '打开设置失败: ' + e, e && e.stack); }
+  }
+
+  /* 备注对话框（放在屏幕上方，避免被 iPhone 键盘挡住） */
+  var noteDlg = $('noteDlg'), noteBackdrop = $('noteBackdrop'), ndInput = $('ndInput'), ndCount = $('ndCount'), ndDel = $('ndDel');
+  var noteId = null;
+  function anySheetOpen() { return !sheet.hidden || !setSheet.hidden || !noteDlg.hidden; }
+  function ndUpdateCount() {
+    var n = Array.from(ndInput.value).length;
+    ndCount.textContent = n + '/' + NOTE_MAX; ndCount.className = 'nd-count' + (n > NOTE_MAX ? ' over' : '');
+  }
+  function openNote(id) {
+    try {
+      var h = findById(id); if (!h) return;
+      noteId = id;
+      $('ndCtx').textContent = Engine.pretty(h.e) + ' = ' + h.r;
+      ndInput.value = h.n || ''; ndDel.hidden = !h.n; ndUpdateCount();
+      noteDlg.hidden = false; noteBackdrop.hidden = false;
+      ndInput.focus(); try { ndInput.select(); } catch (e0) { /* ignore */ }
+      Diag.action('打开备注'); Diag.log('INFO', 'ui', '打开备注编辑 id=' + id + ' 已有备注=' + (h.n ? '是' : '否'));
+    } catch (e) { Diag.log('ERROR', 'ui', '打开备注失败: ' + e, e && e.stack); }
+  }
+  function closeNote() { noteDlg.hidden = true; noteBackdrop.hidden = true; noteId = null; try { ndInput.blur(); } catch (e) { /* ignore */ } }
+  function afterNoteChange() {
+    render();
+    if (!sheet.hidden) renderHistory();
+  }
+  function saveNote(remove) {
+    try {
+      var h = noteId ? findById(noteId) : null;
+      if (!h) { closeNote(); return; }
+      var v = remove ? '' : clipNote(ndInput.value.trim());
+      if (v) h.n = v; else delete h.n;
+      saveHistory();
+      Diag.action(v ? '保存备注' : '删除备注'); Diag.log('INFO', 'ui', (v ? '备注已保存' : '备注已删除') + ' id=' + h.id + ' 长度=' + v.length);
+      closeNote(); afterNoteChange(); Diag.toast(v ? '备注已保存' : '备注已删除');
+    } catch (e) { Diag.log('ERROR', 'ui', '保存备注失败: ' + e, e && e.stack); }
+  }
+  ndInput.addEventListener('input', function (ev) {
+    try {
+      if (!ev.isComposing) { var arr = Array.from(ndInput.value); if (arr.length > NOTE_MAX) ndInput.value = arr.slice(0, NOTE_MAX).join(''); }
+      ndUpdateCount();
+    } catch (e) { Diag.log('ERROR', 'ui', '备注输入处理失败: ' + e, e && e.stack); }
+  });
+  ndInput.addEventListener('keydown', function (ev) {
+    if (ev.isComposing) return;
+    if (ev.key === 'Enter') { ev.preventDefault(); saveNote(false); }
+    else if (ev.key === 'Escape') { ev.preventDefault(); closeNote(); }
+  });
+  $('ndSave').addEventListener('click', function () { saveNote(false); });
+  $('ndCancel').addEventListener('click', closeNote);
+  ndDel.addEventListener('click', function () { saveNote(true); });
+  noteBackdrop.addEventListener('click', closeNote);
+  btnNote.addEventListener('click', function () { if (curId) openNote(curId); });
+  hSearch.addEventListener('input', function () { try { renderHistory(); } catch (e) { Diag.log('ERROR', 'ui', '搜索失败: ' + e, e && e.stack); } });
 
   $('btnHistory').addEventListener('click', openSheet);
   $('btnClose').addEventListener('click', closeSheet);
+  $('btnSettings').addEventListener('click', openSettings);
+  $('btnSetClose').addEventListener('click', closeSheet);
   backdrop.addEventListener('click', closeSheet);
   btnClear.addEventListener('click', function () {
     try {
       if (!clearArmed) {
-        clearArmed = true; btnClear.textContent = '再点一次确认';
+        var nn = noteCount();
+        clearArmed = true; btnClear.textContent = nn ? ('含 ' + nn + ' 条备注，再点确认') : '再点一次确认';
         clearTimer = setTimeout(resetClear, 3000); return;
       }
-      Diag.action('清空历史'); Diag.log('INFO', 'ui', '清空历史记录（原有 ' + history.length + ' 条）');
-      history = []; saveHistory(); resetClear(); renderHistory();
+      Diag.action('清空历史'); Diag.log('INFO', 'ui', '清空历史记录（原有 ' + history.length + ' 条，带备注 ' + noteCount() + ' 条）');
+      history = []; curId = null; saveHistory(); resetClear(); renderHistory(); render();
     } catch (e) { Diag.log('ERROR', 'ui', '清空历史失败: ' + e, e && e.stack); }
   });
   hlist.addEventListener('click', function (ev) {
     try {
-      var b = ev.target.closest ? ev.target.closest('button[data-i]') : null;
+      var nbtn = ev.target.closest ? ev.target.closest('button[data-n]') : null;
+      if (nbtn) { openNote(nbtn.getAttribute('data-n')); return; }
+      var b = ev.target.closest ? ev.target.closest('button[data-id]') : null;
       if (!b) return;
-      var h = history[parseInt(b.getAttribute('data-i'), 10)];
+      var h = findById(b.getAttribute('data-id'));
       if (!h) return;
       Diag.action('取用历史结果 ' + h.r); Diag.log('INFO', 'ui', '取用历史结果 ' + h.r);
       apply(Input.recall(st, h.r)); closeSheet();
     } catch (e) { Diag.log('ERROR', 'ui', '取用历史失败: ' + e, e && e.stack); }
   });
 
+  /* 导出历史和备注 */
+  $('btnExport').addEventListener('click', function () {
+    try {
+      var d = new Date(), lines = [];
+      lines.push('计算器历史 v' + Diag.VERSION + '，导出于 ' + d.getFullYear() + '-' + two(d.getMonth() + 1) + '-' + two(d.getDate()) + ' ' + two(d.getHours()) + ':' + two(d.getMinutes()) + '，共 ' + history.length + ' 条（带备注 ' + noteCount() + ' 条）');
+      history.forEach(function (h) {
+        var x = new Date(h.t || 0);
+        lines.push(x.getFullYear() + '-' + two(x.getMonth() + 1) + '-' + two(x.getDate()) + ' ' + two(x.getHours()) + ':' + two(x.getMinutes()) + '  ' + h.e + ' = ' + h.r + (h.n ? '  备注：' + h.n : ''));
+      });
+      Diag.action('导出历史'); Diag.log('INFO', 'ui', '导出历史 ' + history.length + ' 条，带备注 ' + noteCount() + ' 条');
+      Diag.share(lines.join('\n'), '已复制 ' + history.length + ' 条记录，去备忘录粘贴保存', '自动复制没成功。请点“全选”，再点弹出的“拷贝”，然后粘贴到备忘录保存。');
+    } catch (e) { Diag.log('ERROR', 'ui', '导出失败: ' + e, e && e.stack); }
+  });
+
   /* 按键 */
   $('app').addEventListener('click', function (ev) {
     var b = ev.target.closest ? ev.target.closest('button[data-k]') : null;
-    if (b) press(b.getAttribute('data-k'));
+    if (b) { var k = b.getAttribute('data-k'); feedback(k); press(k); }
   });
   document.addEventListener('keydown', function (ev) {
     try {
       if (ev.metaKey || ev.ctrlKey || ev.altKey) return;
       var tag = ev.target && ev.target.tagName;
+      if (ev.key === 'Escape' && !noteDlg.hidden) { closeNote(); ev.preventDefault(); return; }
       if (tag === 'TEXTAREA' || tag === 'INPUT') return;
       var k = ev.key, map = { '*': '×', '/': '÷', '-': '−', 'x': '×', 'X': '×', ',': '.', 'Enter': '=', '=': '=', 'Backspace': 'del', '(': 'paren', ')': 'paren', '%': '%', '+': '+', '.': '.' };
-      if (k === 'Escape') { if (!sheet.hidden) closeSheet(); else press('ac'); ev.preventDefault(); return; }
-      if (!sheet.hidden) return;
+      if (k === 'Escape') { if (anySheetOpen()) closeSheet(); else press('ac'); ev.preventDefault(); return; }
+      if (anySheetOpen()) return;
       var m = (k.length === 1 && k >= '0' && k <= '9') ? k : map[k];
-      if (m) { ev.preventDefault(); press(m); }
+      if (m) { ev.preventDefault(); feedback(m); press(m); }
     } catch (e) { Diag.log('ERROR', 'ui', '键盘处理失败: ' + e, e && e.stack); }
   });
 
@@ -921,9 +1214,13 @@ button{font-family:inherit;touch-action:manipulation;-webkit-user-select:none;us
     out.push('当前算式: ' + (st.expr === '' ? '(空)' : st.expr));
     out.push('刚算完: ' + (st.fresh ? '是' : '否') + ' · 提示: ' + (st.err || '(无)'));
     out.push('实时预览: ' + (Engine.preview(st.expr) === null ? '(无)' : Engine.preview(st.expr)));
-    out.push('界面字号: ' + mainEl.style.fontSize + ' · 历史面板: ' + (sheet.hidden ? '关闭' : '打开'));
-    out.push('历史条数: ' + history.length + '（上限 ' + HMAX + '）');
-    out.push('最近 5 条历史: ' + (history.slice(0, 5).map(function (h) { return h.e + '=' + h.r; }).join(' ; ') || '(无)'));
+    out.push('面板: 历史 ' + (sheet.hidden ? '关闭' : '打开') + ' · 设置 ' + (setSheet.hidden ? '关闭' : '打开') + ' · 备注框 ' + (noteDlg.hidden ? '关闭' : '打开'));
+    out.push('历史条数: ' + history.length + '（无备注的上限 ' + HMAX + '，总上限 ' + HHARD + '）· 带备注: ' + noteCount() + ' 条（内容不写入报告）');
+    out.push('当前结果可加备注: ' + (notebar.hidden ? '否' : '是') + ' · 备注条: ' + (notebar.hidden ? '隐藏' : (findById(curId) && findById(curId).n ? '已有备注' : '无备注')));
+    out.push('按键音设置: ' + (settings.sound ? '开' : '关') + ' · 音频状态: ' + (Sound.failed ? '不可用' : Sound.ctx ? Sound.ctx.state : '未启动') +
+      ' · 震动设置: ' + (settings.haptic ? '开' : '关') + ' · 震动方式: ' + Haptic.mode);
+    out.push('算式显示: 字号 ' + (mainEl.style.fontSize || '默认') + ' · 内容高度 ' + mainEl.scrollHeight + '/可视 ' + mainEl.clientHeight + ' · 滚动兜底: ' + (mainEl.classList.contains('crush') ? '是' : '否'));
+    out.push('最近 5 条历史: ' + (history.slice(0, 5).map(function (h) { return h.e + '=' + h.r + (h.n ? '[有备注]' : ''); }).join(' ; ') || '(无)'));
     return out;
   });
 
@@ -931,13 +1228,25 @@ button{font-family:inherit;touch-action:manipulation;-webkit-user-select:none;us
   function registerSW() {
     try {
       if (!('serviceWorker' in navigator)) { Diag.setSW('浏览器不支持或非 https'); Diag.log('WARN', 'sw', '不支持 Service Worker（需要 https 网址）'); return; }
+      var hadController = !!navigator.serviceWorker.controller, reloading = false;
+      navigator.serviceWorker.addEventListener('controllerchange', function () {
+        try {
+          if (!hadController || reloading) return;       // 第一次安装不算更新
+          Diag.log('INFO', 'sw', '检测到新版本，已接管');
+          if (st.expr === '' && !anySheetOpen()) { reloading = true; location.reload(); }
+          else Diag.toast('已有新版本，下次打开生效');
+        } catch (e) { Diag.log('ERROR', 'sw', '处理新版本时异常: ' + e, e && e.stack); }
+      });
       navigator.serviceWorker.register('sw.js').then(function (reg) {
         Diag.setSW('已注册 scope=' + reg.scope); Diag.log('INFO', 'sw', '离线缓存已注册 ' + reg.scope);
       }, function (e) { Diag.setSW('注册失败: ' + e); Diag.log('WARN', 'sw', '离线缓存注册失败: ' + e); });
     } catch (e) { Diag.log('ERROR', 'sw', '注册离线缓存时异常: ' + e, e && e.stack); }
   }
 
+  loadSettings();
+  Haptic.init();
   loadHistory();
+  Diag.log('INFO', 'app', '设置: 按键音=' + settings.sound + ' 震动=' + settings.haptic + ' 震动方式=' + Haptic.mode);
   render();
   window.addEventListener('load', function () {
     registerSW();

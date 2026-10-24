@@ -1,12 +1,19 @@
 /* 计算器 Service Worker：让它断网也能打开。每次发新版请同步修改 VERSION。 */
-var VERSION = '1.0.0';
+var VERSION = '1.2.0';
 var CACHE = 'calc-' + VERSION;
 var ASSETS = ['./', 'index.html', 'manifest.webmanifest', 'icon-192.png', 'icon-512.png', 'apple-touch-icon.png'];
 
 self.addEventListener('install', function (e) {
   e.waitUntil(
     caches.open(CACHE)
-      .then(function (c) { return c.addAll(ASSETS); })
+      .then(function (c) {   // cache:'reload' 绕过浏览器旧缓存，保证装进去的一定是最新文件
+        return Promise.all(ASSETS.map(function (u) {
+          return fetch(new Request(u, { cache: 'reload' })).then(function (r) {
+            if (!r.ok) throw new Error('缓存失败 ' + u + ' ' + r.status);
+            return c.put(u, r);
+          });
+        }));
+      })
       .then(function () { return self.skipWaiting(); })
   );
 });
