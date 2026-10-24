@@ -1,0 +1,951 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="计算器">
+<meta name="format-detection" content="telephone=no">
+<meta name="theme-color" content="#0f1115">
+<meta name="app-version" content="1.0.0">
+<title>计算器</title>
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<link rel="icon" href="icon-192.png">
+<style>
+:root{
+  --bg:#0f1115; --fg:#f2f4f8; --muted:#8b93a3; --line:#2a303b;
+  --key:#1d2129; --key-fn:#2e3440; --key-op:#3a4560; --accent:#ffb547; --accent-fg:#1a1200;
+  --accent2:#6cc7f0; --accent2-fg:#05202b; --danger:#ff6b6b; --sheet:#171a21;
+}
+@media (prefers-color-scheme: light){
+  :root{
+    --bg:#eceff4; --fg:#12151b; --muted:#667085; --line:#d5dae3;
+    --key:#ffffff; --key-fn:#dde2ea; --key-op:#cfd8ea; --accent:#f59e0b; --accent-fg:#1a1200;
+    --accent2:#1b8fc4; --accent2-fg:#ffffff; --danger:#d92d20; --sheet:#ffffff;
+  }
+}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{margin:0;height:100%;background:var(--bg);color:var(--fg)}
+body{
+  font-family:-apple-system,BlinkMacSystemFont,"SF Pro Text","PingFang SC","Helvetica Neue",Arial,sans-serif;
+  overscroll-behavior:none;-webkit-text-size-adjust:100%;
+}
+button{font-family:inherit;touch-action:manipulation;-webkit-user-select:none;user-select:none;cursor:pointer}
+[hidden]{display:none !important}
+
+.app{
+  height:100vh;height:100dvh;max-width:480px;margin:0 auto;display:flex;flex-direction:column;
+  padding:max(env(safe-area-inset-top),8px) 16px max(env(safe-area-inset-bottom),12px);
+}
+.bar{display:flex;align-items:center;justify-content:space-between;gap:8px;min-height:48px}
+.bar-btn{
+  min-height:38px;padding:0 14px;border-radius:19px;border:1px solid var(--line);
+  background:var(--key-fn);color:var(--fg);font-size:15px;white-space:nowrap
+}
+.bar-btn.diag{background:var(--accent2);color:var(--accent2-fg);border-color:transparent;font-weight:600}
+.ver{font-size:12px;color:var(--muted)}
+
+.display{
+  position:relative;flex:1;min-height:96px;display:flex;flex-direction:column;
+  justify-content:flex-end;align-items:flex-end;padding:8px 4px 12px;min-width:0
+}
+.sub{min-height:26px;font-size:20px;color:var(--muted);max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
+  -webkit-user-select:text;user-select:text}
+.sub.err{color:var(--danger)}
+.main{
+  max-width:100%;font-size:64px;font-weight:300;line-height:1.15;white-space:nowrap;overflow-x:auto;
+  font-variant-numeric:tabular-nums;scrollbar-width:none;-webkit-user-select:text;user-select:text
+}
+.main::-webkit-scrollbar{display:none}
+.del{
+  position:absolute;left:0;top:6px;width:48px;height:40px;border-radius:12px;border:0;
+  background:transparent;color:var(--muted);font-size:24px
+}
+.del:active{background:var(--key-fn)}
+
+.keys{
+  display:grid;grid-template-columns:repeat(4,1fr);grid-template-rows:repeat(5,1fr);gap:10px;
+  height:min(60vh,118vw);height:min(60dvh,118vw)
+}
+.key{
+  border:0;border-radius:18px;font-size:clamp(22px,6.4vw,30px);background:var(--key);color:var(--fg);
+  transition:transform .06s,filter .06s;min-width:0
+}
+.key:active{transform:scale(.96);filter:brightness(1.3)}
+.key.fn{background:var(--key-fn)}
+.key.op{background:var(--key-op)}
+.key.eq{background:var(--accent);color:var(--accent-fg);font-weight:600}
+
+.backdrop{position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,.5);z-index:10}
+.sheet{
+  position:fixed;left:0;right:0;bottom:0;height:78vh;height:78dvh;max-width:480px;margin:0 auto;z-index:11;
+  background:var(--sheet);border-radius:20px 20px 0 0;display:flex;flex-direction:column;
+  padding-bottom:env(safe-area-inset-bottom);box-shadow:0 -8px 30px rgba(0,0,0,.35)
+}
+@media (prefers-reduced-motion: no-preference){
+  .sheet{animation:up .18s ease-out}
+  @keyframes up{from{transform:translateY(40px);opacity:.4}to{transform:none;opacity:1}}
+}
+.sheet-head{display:flex;align-items:center;justify-content:space-between;padding:12px 14px;border-bottom:1px solid var(--line)}
+.sheet-list{flex:1;margin:0;padding:0;list-style:none;overflow-y:auto;-webkit-overflow-scrolling:touch}
+.h-item{
+  display:block;width:100%;text-align:right;background:none;border:0;border-bottom:1px solid var(--line);
+  color:var(--fg);padding:12px 18px
+}
+.h-item:active{background:var(--key-fn)}
+.h-t{display:block;font-size:12px;color:var(--muted)}
+.h-e{display:block;font-size:15px;color:var(--muted);word-break:break-all}
+.h-r{display:block;font-size:28px;font-weight:300;word-break:break-all}
+.h-empty{padding:40px 16px;text-align:center;color:var(--muted)}
+
+#toast{
+  position:fixed;left:50%;top:calc(env(safe-area-inset-top) + 58px);transform:translateX(-50%);z-index:50;
+  background:var(--fg);color:var(--bg);padding:10px 16px;border-radius:20px;font-size:15px;max-width:90vw;
+  opacity:0;pointer-events:none;transition:opacity .2s;text-align:center
+}
+#toast.show{opacity:1}
+
+.modal{position:fixed;top:0;left:0;right:0;bottom:0;z-index:60;background:rgba(0,0,0,.6);display:flex;align-items:center;justify-content:center;padding:16px}
+.modal-box{width:100%;max-width:520px;background:var(--sheet);color:var(--fg);border-radius:16px;padding:14px;display:flex;flex-direction:column;gap:10px;max-height:90dvh}
+.modal-box p{margin:0;font-size:15px;line-height:1.5}
+.modal-box textarea{width:100%;height:40vh;height:40dvh;font-size:12px;font-family:ui-monospace,Menlo,monospace;background:var(--bg);color:var(--fg);border:1px solid var(--line);border-radius:10px;padding:8px}
+.modal-row{display:flex;gap:10px;justify-content:flex-end}
+</style>
+</head>
+<body>
+<div class="app" id="app">
+  <header class="bar">
+    <button type="button" class="bar-btn" id="btnHistory">历史</button>
+    <span class="ver" id="ver"></span>
+    <button type="button" class="bar-btn diag" id="btnDiag">复制诊断报告</button>
+  </header>
+
+  <main class="display" id="display">
+    <button type="button" class="del" data-k="del" aria-label="退格">⌫</button>
+    <div class="sub" id="sub"></div>
+    <div class="main" id="main">0</div>
+  </main>
+
+  <section class="keys" id="keys" aria-label="计算器按键">
+    <button type="button" class="key fn" data-k="ac" aria-label="全部清除">AC</button>
+    <button type="button" class="key fn" data-k="paren" aria-label="括号">( )</button>
+    <button type="button" class="key fn" data-k="%" aria-label="百分号">%</button>
+    <button type="button" class="key op" data-k="÷" aria-label="除">÷</button>
+
+    <button type="button" class="key" data-k="7">7</button>
+    <button type="button" class="key" data-k="8">8</button>
+    <button type="button" class="key" data-k="9">9</button>
+    <button type="button" class="key op" data-k="×" aria-label="乘">×</button>
+
+    <button type="button" class="key" data-k="4">4</button>
+    <button type="button" class="key" data-k="5">5</button>
+    <button type="button" class="key" data-k="6">6</button>
+    <button type="button" class="key op" data-k="−" aria-label="减">−</button>
+
+    <button type="button" class="key" data-k="1">1</button>
+    <button type="button" class="key" data-k="2">2</button>
+    <button type="button" class="key" data-k="3">3</button>
+    <button type="button" class="key op" data-k="+" aria-label="加">+</button>
+
+    <button type="button" class="key fn" data-k="neg" aria-label="正负号">±</button>
+    <button type="button" class="key" data-k="0">0</button>
+    <button type="button" class="key" data-k="." aria-label="小数点">.</button>
+    <button type="button" class="key eq" data-k="=" aria-label="等于">=</button>
+  </section>
+</div>
+
+<div id="backdrop" class="backdrop" hidden></div>
+<section id="sheet" class="sheet" role="dialog" aria-modal="true" aria-label="历史记录" hidden>
+  <div class="sheet-head">
+    <button type="button" class="bar-btn" id="btnClear">清空</button>
+    <strong>历史记录</strong>
+    <button type="button" class="bar-btn" id="btnClose">关闭</button>
+  </div>
+  <ul class="sheet-list" id="hlist"></ul>
+</section>
+
+<div id="toast" role="status" aria-live="polite"></div>
+<noscript><p style="padding:24px">需要开启 JavaScript 才能使用计算器。</p></noscript>
+
+<!-- ============ 第 1 段脚本：诊断层（独立成段，主程序出错时它仍能工作） ============ -->
+<script>
+(function () {
+  'use strict';
+  var VERSION = '1.0.0';
+  var APP = '计算器';
+  var MAX_LOG = 200, MAX_ACT = 60, MAX_ERR = 20;
+  var STORE_KEY = 'calc.diag.v1';
+  var logs = [], acts = [], errs = [];
+  var selfErrors = 0, inHook = false, t0 = Date.now();
+  var prev = null, swState = '未注册', snapshotFn = null, saveTimer = null;
+
+  function two(n) { return n < 10 ? '0' + n : '' + n; }
+  function stamp(t) {
+    var d = new Date(t);
+    return two(d.getMonth() + 1) + '-' + two(d.getDate()) + ' ' + two(d.getHours()) + ':' + two(d.getMinutes()) + ':' +
+      two(d.getSeconds()) + '.' + ('00' + d.getMilliseconds()).slice(-3);
+  }
+  function clip(s, n) { s = String(s); return s.length > n ? s.slice(0, n) + '…(+' + (s.length - n) + ')' : s; }
+  function safeStr(x) {
+    try {
+      if (x instanceof Error) return (x.name || 'Error') + ': ' + x.message;
+      if (typeof x === 'string') return x;
+      if (x === undefined) return 'undefined';
+      if (typeof x === 'object') { try { return JSON.stringify(x); } catch (e) { return Object.prototype.toString.call(x); } }
+      return String(x);
+    } catch (e) { return '[unprintable]'; }
+  }
+  function urlNoQuery(u) {
+    try { var x = new URL(String(u), location.href); return x.origin + x.pathname; }
+    catch (e) { return clip(String(u).split(/[?#]/)[0], 200); }
+  }
+  /* 脱敏：密钥/token/密码/cookie、邮箱、手机号、网址参数。keepNum=true 时保留数字（计算内容需要原样复现）。 */
+  function redact(s, keepNum) {
+    try {
+      s = String(s);
+      s = s.replace(/(api[_-]?key|access[_-]?token|token|secret|password|passwd|pwd|cookie|authorization|session)(["']?\s*[:=]\s*["']?)[^\s"'&,;]+/ig, '$1$2***');
+      s = s.replace(/Bearer\s+[A-Za-z0-9._~+\/=-]+/g, 'Bearer ***');
+      s = s.replace(/[\w.+-]+@[\w-]+(?:\.[\w-]+)+/g, '***@***');
+      s = s.replace(/\b(?=[A-Za-z0-9_-]*[A-Za-z])(?=[A-Za-z0-9_-]*\d)[A-Za-z0-9_-]{32,}\b/g, '***');
+      s = s.replace(/(https?:\/\/[^\s?#]+)\?[^\s#]*/g, '$1?***');
+      if (!keepNum) {
+        s = s.replace(/\b1[3-9]\d{9}\b/g, '***phone***').replace(/\+?\d{2,4}[\s-]\d{3,4}[\s-]\d{3,4}/g, '***phone***');
+      }
+      return s;
+    } catch (e) { return '[redact failed]'; }
+  }
+
+  function log(level, mod, msg, stack) {
+    try {
+      var keep = (mod === 'calc' || mod === 'ui');
+      var e = { t: Date.now(), l: level, m: mod, s: clip(redact(typeof msg === 'string' ? msg : safeStr(msg), keep), 400) };
+      logs.push(e); if (logs.length > MAX_LOG) logs.shift();
+      if (level === 'ERROR') {
+        errs.push({ t: e.t, m: mod, s: e.s, st: stack ? clip(redact(stack, keep), 1800) : '' });
+        if (errs.length > MAX_ERR) errs.shift();
+      }
+      if (level !== 'INFO') scheduleSave();
+    } catch (x) { selfErrors++; }
+  }
+  function action(text) {
+    try { acts.push({ t: Date.now(), s: clip(redact(text, true), 80) }); if (acts.length > MAX_ACT) acts.shift(); }
+    catch (x) { selfErrors++; }
+  }
+
+  /* ---- 跨会话保存（页面被系统杀掉后，下次还能看到上次的错误） ---- */
+  function save() {
+    try {
+      var o = { v: VERSION, t: Date.now(), errs: errs.slice(-MAX_ERR), logs: logs.slice(-60) };
+      var s = JSON.stringify(o);
+      if (s.length > 30000) { o.logs = o.logs.slice(-20); s = JSON.stringify(o); }
+      localStorage.setItem(STORE_KEY, s);
+    } catch (e) { /* 存储不可用就算了 */ }
+  }
+  function scheduleSave() {
+    try { if (saveTimer) return; saveTimer = setTimeout(function () { saveTimer = null; save(); }, 800); } catch (e) { selfErrors++; }
+  }
+  try { var raw = localStorage.getItem(STORE_KEY); if (raw) prev = JSON.parse(raw); } catch (e) { prev = null; }
+
+  /* ---- 全局错误捕获 ---- */
+  try {
+    window.addEventListener('error', function (ev) {
+      try {
+        var tgt = ev.target;
+        if (tgt && tgt !== window && (tgt.src || tgt.href)) {
+          log('ERROR', 'resource', '资源加载失败: ' + (tgt.tagName || '?') + ' ' + urlNoQuery(tgt.src || tgt.href));
+          return;
+        }
+        var msg = ev.message || (ev.error && ev.error.message) || '未知错误';
+        log('ERROR', 'window.onerror', msg + ' @ ' + urlNoQuery(ev.filename || '') + ':' + ev.lineno + ':' + ev.colno, ev.error && ev.error.stack);
+      } catch (e) { selfErrors++; }
+    }, true);
+    window.addEventListener('unhandledrejection', function (ev) {
+      try { log('ERROR', 'promise', '未处理的 Promise 异常: ' + safeStr(ev.reason), ev.reason && ev.reason.stack); } catch (e) { selfErrors++; }
+    });
+    window.addEventListener('online', function () { log('INFO', 'net', '网络已连接'); });
+    window.addEventListener('offline', function () { log('WARN', 'net', '网络已断开'); });
+    window.addEventListener('pagehide', save);
+    document.addEventListener('visibilitychange', function () {
+      log('INFO', 'app', '页面' + (document.hidden ? '进入后台' : '回到前台'));
+      if (document.hidden) save();
+    });
+    document.addEventListener('securitypolicyviolation', function (ev) {
+      log('ERROR', 'csp', '安全策略拦截: ' + ev.violatedDirective + ' ' + urlNoQuery(ev.blockedURI || ''));
+    });
+  } catch (e) { selfErrors++; }
+
+  /* ---- console.error / console.warn ---- */
+  try {
+    ['error', 'warn'].forEach(function (name) {
+      var orig = console[name];
+      console[name] = function () {
+        try {
+          if (!inHook) {
+            inHook = true;
+            var parts = [], stack = '';
+            for (var i = 0; i < arguments.length; i++) {
+              parts.push(safeStr(arguments[i]));
+              if (!stack && arguments[i] instanceof Error) stack = arguments[i].stack || '';
+            }
+            log(name === 'error' ? 'ERROR' : 'WARN', 'console', parts.join(' '), stack);
+          }
+        } catch (e) { selfErrors++; } finally { inHook = false; }
+        try { return orig.apply(console, arguments); } catch (e) { /* ignore */ }
+      };
+    });
+  } catch (e) { selfErrors++; }
+
+  /* ---- fetch / XHR（只记录地址、状态码、耗时；不记录内容） ---- */
+  try {
+    if (window.fetch) {
+      var origFetch = window.fetch;
+      window.fetch = function (input, init) {
+        var url = '?', method = 'GET', t = Date.now();
+        try {
+          url = urlNoQuery(typeof input === 'string' ? input : (input && input.url) || '');
+          method = (init && init.method) || (input && input.method) || 'GET';
+          log('INFO', 'net', 'fetch 开始 ' + method + ' ' + url);
+        } catch (e) { selfErrors++; }
+        var p;
+        try { p = origFetch.apply(window, arguments); }
+        catch (err) { log('ERROR', 'net', 'fetch 同步异常 ' + url + ' ' + safeStr(err)); throw err; }
+        return p.then(function (res) {
+          try {
+            var dt = Date.now() - t, st = res && res.status;
+            log(st >= 400 ? 'ERROR' : 'INFO', 'net', 'fetch ' + st + ' ' + url + ' ' + dt + 'ms');
+          } catch (e) { selfErrors++; }
+          return res;
+        }, function (err) {
+          try { log('ERROR', 'net', 'fetch 失败 ' + url + ' ' + safeStr(err) + ' ' + (Date.now() - t) + 'ms'); } catch (e) { selfErrors++; }
+          throw err;
+        });
+      };
+    }
+    if (window.XMLHttpRequest) {
+      var xo = XMLHttpRequest.prototype.open, xs = XMLHttpRequest.prototype.send;
+      XMLHttpRequest.prototype.open = function (m, u) {
+        try { this.__d = { m: m, u: urlNoQuery(u) }; } catch (e) { selfErrors++; }
+        return xo.apply(this, arguments);
+      };
+      XMLHttpRequest.prototype.send = function () {
+        try {
+          var d = this.__d;
+          if (d) {
+            d.t = Date.now();
+            log('INFO', 'net', 'XHR 开始 ' + d.m + ' ' + d.u);
+            var x = this;
+            this.addEventListener('loadend', function () {
+              try {
+                var bad = x.status === 0 || x.status >= 400;
+                log(bad ? 'ERROR' : 'INFO', 'net', 'XHR ' + x.status + ' ' + d.u + ' ' + (Date.now() - d.t) + 'ms');
+              } catch (e) { selfErrors++; }
+            });
+          }
+        } catch (e) { selfErrors++; }
+        return xs.apply(this, arguments);
+      };
+    }
+  } catch (e) { selfErrors++; }
+
+  /* ---- 诊断报告 ---- */
+  function lsOk() { try { localStorage.setItem('calc.t', '1'); localStorage.removeItem('calc.t'); return '可用'; } catch (e) { return '不可用'; } }
+  function buildReport() {
+    try {
+      var L = [], n = navigator, i;
+      L.push('# 诊断报告 · ' + APP + ' v' + VERSION);
+      L.push('- 生成时间: ' + new Date().toString());
+      L.push('- 本次已运行: ' + Math.round((Date.now() - t0) / 1000) + ' 秒');
+      L.push('- 诊断层自身异常次数: ' + selfErrors);
+      L.push('');
+      L.push('## 运行环境');
+      var standalone = (n.standalone === true) || (window.matchMedia && matchMedia('(display-mode: standalone)').matches);
+      var tz = ''; try { tz = Intl.DateTimeFormat().resolvedOptions().timeZone; } catch (e) { tz = '?'; }
+      L.push('- 浏览器/系统: ' + redact(n.userAgent, false));
+      L.push('- 平台: ' + n.platform + ' · 语言: ' + n.language + ' · 时区: ' + tz);
+      L.push('- 屏幕: ' + screen.width + 'x' + screen.height + ' · 窗口: ' + innerWidth + 'x' + innerHeight + ' · 像素比: ' + (window.devicePixelRatio || 1));
+      L.push('- 以主屏幕 App 方式运行: ' + (standalone ? '是' : '否（在 Safari 里打开）'));
+      L.push('- 网络: ' + (n.onLine ? '在线' : '离线') + ' · 本地存储: ' + lsOk() + ' · BigInt: ' + (typeof BigInt));
+      L.push('- 深色模式: ' + (window.matchMedia && matchMedia('(prefers-color-scheme: dark)').matches ? '是' : '否'));
+      L.push('- 离线缓存: ' + swState + ' · 已接管页面: ' + ((n.serviceWorker && n.serviceWorker.controller) ? '是' : '否'));
+      L.push('- 页面地址: ' + urlNoQuery(location.href));
+      L.push('');
+      L.push('## 当前状态');
+      try {
+        var snap = snapshotFn ? snapshotFn() : [];
+        if (!snap.length) L.push('- (无)');
+        for (i = 0; i < snap.length; i++) L.push('- ' + redact(snap[i], true));
+      } catch (e) { L.push('- 状态快照失败: ' + safeStr(e)); }
+      L.push('');
+      L.push('## 最近用户操作（最近 ' + MAX_ACT + ' 条，旧→新）');
+      L.push('```text');
+      if (!acts.length) L.push('(无)');
+      for (i = 0; i < acts.length; i++) L.push(stamp(acts[i].t) + ' ' + acts[i].s);
+      L.push('```');
+      L.push('');
+      L.push('## 最近错误及堆栈（最近 ' + MAX_ERR + ' 条）');
+      if (!errs.length) L.push('本次运行没有错误。');
+      for (i = 0; i < errs.length; i++) {
+        L.push('- ' + stamp(errs[i].t) + ' [' + errs[i].m + '] ' + errs[i].s);
+        if (errs[i].st) L.push('```text\n' + errs[i].st + '\n```');
+      }
+      L.push('');
+      L.push('## 最近日志（最多 ' + MAX_LOG + ' 条，旧→新）');
+      L.push('```text');
+      for (i = 0; i < logs.length; i++) L.push(stamp(logs[i].t) + ' [' + logs[i].l + '] ' + logs[i].m + ': ' + logs[i].s);
+      L.push('```');
+      L.push('');
+      L.push('## 上一次运行遗留');
+      if (prev && prev.errs && prev.errs.length) {
+        L.push('- 上次版本 v' + prev.v + '，保存于 ' + stamp(prev.t) + '，有 ' + prev.errs.length + ' 条错误：');
+        for (i = 0; i < prev.errs.length; i++) {
+          var pe = prev.errs[i];
+          L.push('  - ' + stamp(pe.t) + ' [' + pe.m + '] ' + pe.s);
+          if (pe.st) L.push('```text\n' + pe.st + '\n```');
+        }
+      } else { L.push('- 上次运行没有记录到错误。'); }
+      L.push('');
+      L.push('已脱敏字段：密钥/token/密码/cookie 类内容、邮箱、手机号、网址参数。算式与数字按原样保留（需要它们来复现计算问题）。不记录任何网络请求/响应内容。');
+      return L.join('\n');
+    } catch (e) {
+      selfErrors++;
+      return '# 诊断报告生成失败\n版本 v' + VERSION + '\n原因: ' + safeStr(e) + '\n最近日志:\n' +
+        logs.slice(-40).map(function (x) { return stamp(x.t) + ' ' + x.l + ' ' + x.m + ': ' + x.s; }).join('\n');
+    }
+  }
+
+  /* ---- 提示条 / 复制 ---- */
+  var toastTimer = null;
+  function toast(msg) {
+    try {
+      var el = document.getElementById('toast'); if (!el) return;
+      el.textContent = msg; el.className = 'show';
+      clearTimeout(toastTimer); toastTimer = setTimeout(function () { el.className = ''; }, 2600);
+    } catch (e) { selfErrors++; }
+  }
+  function tryExec(text) {
+    var ta = null;
+    try {
+      ta = document.createElement('textarea');
+      ta.value = text; ta.setAttribute('readonly', '');
+      ta.style.cssText = 'position:fixed;top:0;left:0;width:1px;height:1px;opacity:0;';
+      document.body.appendChild(ta);
+      ta.focus(); ta.select(); ta.setSelectionRange(0, text.length);
+      var ok = document.execCommand('copy');
+      return !!ok;
+    } catch (e) { return false; }
+    finally { try { if (ta && ta.parentNode) ta.parentNode.removeChild(ta); } catch (e2) { /* ignore */ } }
+  }
+  function copyText(text, cb) {
+    function fallback(why) {
+      log('WARN', 'diag', 'clipboard API 未成功: ' + why);
+      if (tryExec(text)) cb('execCommand'); else { log('WARN', 'diag', 'execCommand 也未成功，改为手动复制'); cb(null); }
+    }
+    try {
+      if (navigator.clipboard && navigator.clipboard.writeText && window.isSecureContext) {
+        navigator.clipboard.writeText(text).then(function () { cb('clipboard'); }, function (e) { fallback(safeStr(e)); });
+        return;
+      }
+    } catch (e) { /* 走降级 */ }
+    fallback('无 clipboard API 或非安全环境');
+  }
+  function showModal(text) {
+    try {
+      var old = document.getElementById('diagModal'); if (old) old.parentNode.removeChild(old);
+      var m = document.createElement('div'); m.id = 'diagModal'; m.className = 'modal';
+      var box = document.createElement('div'); box.className = 'modal-box';
+      var p = document.createElement('p'); p.textContent = '自动复制没成功。请点“全选”，再点弹出的“拷贝”，然后粘贴给 Claude。';
+      var ta = document.createElement('textarea'); ta.value = text; ta.readOnly = true;
+      var row = document.createElement('div'); row.className = 'modal-row';
+      var b1 = document.createElement('button'); b1.type = 'button'; b1.className = 'bar-btn diag'; b1.textContent = '全选';
+      var b2 = document.createElement('button'); b2.type = 'button'; b2.className = 'bar-btn'; b2.textContent = '关闭';
+      b1.onclick = function () { ta.focus(); ta.select(); try { ta.setSelectionRange(0, text.length); } catch (e) { /* ignore */ } };
+      b2.onclick = function () { if (m.parentNode) m.parentNode.removeChild(m); };
+      row.appendChild(b1); row.appendChild(b2);
+      box.appendChild(p); box.appendChild(ta); box.appendChild(row); m.appendChild(box);
+      document.body.appendChild(m);
+      b1.onclick();
+    } catch (e) { selfErrors++; }
+  }
+  function onDiagClick() {
+    try {
+      action('点击: 复制诊断报告');
+      var text = buildReport();
+      copyText(text, function (how) {
+        try {
+          if (how) { log('INFO', 'diag', '诊断报告已复制（' + how + '）' + text.length + ' 字符'); toast('已复制，回聊天里粘贴给 Claude'); }
+          else { showModal(text); }
+        } catch (e) { selfErrors++; }
+      });
+    } catch (e) { selfErrors++; showModal('诊断按钮自身出错: ' + safeStr(e)); }
+  }
+
+  try {
+    var v = document.getElementById('ver'); if (v) v.textContent = 'v' + VERSION;
+    var bd = document.getElementById('btnDiag'); if (bd) bd.addEventListener('click', onDiagClick);
+  } catch (e) { selfErrors++; }
+
+  window.Diag = {
+    VERSION: VERSION, log: log, action: action, toast: toast, report: buildReport, copy: copyText,
+    setSnapshot: function (fn) { snapshotFn = fn; },
+    setSW: function (s) { swState = s; },
+    _selfErrors: function () { return selfErrors; }
+  };
+  log('INFO', 'diag', '诊断层启动 v' + VERSION + (prev ? '（读到上次运行记录）' : ''));
+})();
+</script>
+
+<!-- ============ 第 2 段脚本：计算器本体 ============ -->
+<script>
+(function () {
+  'use strict';
+  var Diag = window.Diag || { log: function () {}, action: function () {}, toast: function () {}, setSnapshot: function () {}, setSW: function () {} };
+  function $(id) { return document.getElementById(id); }
+
+  /* ENGINE-START */
+  var Engine = (function () {
+    var P = 40;       // 除法保留的小数位
+    var SIG = 15;     // 结果最多显示的有效数字
+    var ZERO = BigInt(0), ONE = BigInt(1), TWO = BigInt(2), TEN = BigInt(10);
+    function pow10(k) { return TEN ** BigInt(k); }
+    function abs(x) { return x < ZERO ? -x : x; }
+    function D(n, s) { return { n: n, s: s }; }
+    function fail(code, msg) { throw { calc: true, code: code, msg: msg }; }
+
+    function norm(d) {
+      var n = d.n, s = d.s;
+      while (s > 0 && n % TEN === ZERO) { n = n / TEN; s--; }
+      if (n === ZERO) s = 0;
+      return D(n, s);
+    }
+    function roundTo(d, scale) {          // 四舍五入（远离 0）到 scale 位小数
+      if (d.s <= scale) return d;
+      var k = d.s - scale, f = pow10(k), neg = d.n < ZERO, a = abs(d.n);
+      var q = a / f, r = a % f;
+      if (r * TWO >= f) q = q + ONE;
+      return D(neg ? -q : q, scale);
+    }
+    function lim(d) { return d.s > 60 ? norm(roundTo(d, 60)) : d; }
+    function align(a, b) {
+      if (a.s === b.s) return [a, b];
+      if (a.s < b.s) return [D(a.n * pow10(b.s - a.s), b.s), b];
+      return [a, D(b.n * pow10(a.s - b.s), a.s)];
+    }
+    function add(a, b) { var p = align(a, b); return norm(D(p[0].n + p[1].n, p[0].s)); }
+    function neg(a) { return D(-a.n, a.s); }
+    function sub(a, b) { return add(a, neg(b)); }
+    function mul(a, b) { return lim(norm(D(a.n * b.n, a.s + b.s))); }
+    function div(a, b) {
+      if (b.n === ZERO) fail('DIV0', '不能除以 0');
+      var num = a.n * pow10(b.s + P), den = b.n * pow10(a.s);
+      var negv = (num < ZERO) !== (den < ZERO);
+      var an = abs(num), ad = abs(den), q = an / ad, r = an % ad;
+      if (r * TWO >= ad) q = q + ONE;
+      return norm(D(negv ? -q : q, P));
+    }
+    function pctOf(a) { return norm(D(a.n, a.s + 2)); }
+    function parseNum(str) {
+      var i = str.indexOf('.');
+      var ip = i < 0 ? str : str.slice(0, i), fp = i < 0 ? '' : str.slice(i + 1);
+      return norm(D(BigInt((ip + fp) || '0'), fp.length));
+    }
+    function fmt(d) {
+      d = norm(d);
+      if (d.n === ZERO) return '0';
+      var digits = abs(d.n).toString();
+      if (digits.length - d.s > 20) fail('BIG', '结果太大');
+      if (digits.length > SIG && d.s > 0) {
+        var cut = Math.min(digits.length - SIG, d.s);
+        d = norm(roundTo(d, d.s - cut));
+        if (d.n === ZERO) return '0';
+        digits = abs(d.n).toString();
+      }
+      var s = d.s, str;
+      if (s === 0) str = digits;
+      else {
+        while (digits.length <= s) digits = '0' + digits;
+        str = digits.slice(0, digits.length - s) + '.' + digits.slice(digits.length - s);
+      }
+      return (d.n < ZERO ? '-' : '') + str;
+    }
+
+    function tokenize(src) {
+      var t = [], i = 0, c, j, dots, txt;
+      while (i < src.length) {
+        c = src.charAt(i);
+        if ((c >= '0' && c <= '9') || c === '.') {
+          j = i; dots = 0;
+          while (j < src.length && ((src.charAt(j) >= '0' && src.charAt(j) <= '9') || src.charAt(j) === '.')) { if (src.charAt(j) === '.') dots++; j++; }
+          txt = src.slice(i, j);
+          if (dots > 1 || txt === '.') fail('SYNTAX', '算式不完整');
+          t.push({ t: 'num', v: txt }); i = j; continue;
+        }
+        if (c === '+') t.push({ t: '+' });
+        else if (c === '−' || c === '-') t.push({ t: '-' });
+        else if (c === '×' || c === '*') t.push({ t: '*' });
+        else if (c === '÷' || c === '/') t.push({ t: '/' });
+        else if (c === '(' || c === ')' || c === '%') t.push({ t: c });
+        else fail('SYNTAX', '算式里有无法识别的符号');
+        i++;
+      }
+      return t;
+    }
+    function parse(tokens) {
+      var pos = 0, depth = 0;
+      function peek() { return tokens[pos]; }
+      function syntax() { fail('SYNTAX', '算式不完整'); }
+      function expr() {
+        var v = term().v, t, r, rv;
+        while ((t = peek()) && (t.t === '+' || t.t === '-')) {
+          pos++; r = term();
+          rv = r.pct ? mul(v, r.v) : r.v;      // 200+10% 表示 200 加上 200 的 10%
+          v = t.t === '+' ? add(v, rv) : sub(v, rv);
+        }
+        return v;
+      }
+      function term() {
+        var f = unary(), v = f.v, pct = f.pct, t, r;
+        while ((t = peek()) && (t.t === '*' || t.t === '/')) {
+          pos++; r = unary();
+          v = t.t === '*' ? mul(v, r.v) : div(v, r.v); pct = false;
+        }
+        return { v: v, pct: pct };
+      }
+      function unary() {
+        var t = peek(), r;
+        if (t && (t.t === '-' || t.t === '+')) {
+          pos++; if (++depth > 200) syntax();
+          r = unary(); depth--;
+          return { v: t.t === '-' ? neg(r.v) : r.v, pct: false };
+        }
+        return postfix();
+      }
+      function postfix() {
+        var v = primary(), pct = false;
+        while (peek() && peek().t === '%') { pos++; v = pctOf(v); pct = true; }
+        return { v: v, pct: pct };
+      }
+      function primary() {
+        var t = peek(), v;
+        if (!t) syntax();
+        if (t.t === 'num') { pos++; return parseNum(t.v); }
+        if (t.t === '(') {
+          pos++; if (++depth > 200) syntax();
+          v = expr();
+          if (!peek() || peek().t !== ')') syntax();
+          pos++; depth--; return v;
+        }
+        return syntax();
+      }
+      var out = expr();
+      if (pos !== tokens.length) syntax();
+      return out;
+    }
+    function prepare(src) {
+      var s = String(src), c, i, open = 0;
+      for (;;) {
+        c = s.slice(-1);
+        if (c !== '' && '+−×÷-*/('.indexOf(c) >= 0) s = s.slice(0, -1); else break;
+      }
+      for (i = 0; i < s.length; i++) {
+        c = s.charAt(i);
+        if (c === '(') open++;
+        else if (c === ')') { open--; if (open < 0) fail('SYNTAX', '括号不匹配'); }
+      }
+      while (open-- > 0) s += ')';
+      return s;
+    }
+    function evaluate(src) {
+      try {
+        var s = prepare(src);
+        if (s === '') return { empty: true };
+        return { ok: true, text: fmt(parse(tokenize(s))), expr: s };
+      } catch (x) {
+        if (x && x.calc) return { ok: false, code: x.code, msg: x.msg };
+        return { ok: false, code: 'INTERNAL', msg: '计算出错了', detail: String(x && x.stack ? x.stack : x) };
+      }
+    }
+    function isCalc(e) { return /[+×÷%(]/.test(e) || /.−/.test(e); }
+    function preview(e) {
+      if (!isCalc(e)) return null;
+      var r = evaluate(e);
+      return r.ok ? r.text : null;
+    }
+    function pretty(e) { return String(e).replace(/([\d)%.])([+−×÷])/g, '$1 $2 '); }
+    return { evaluate: evaluate, preview: preview, isCalc: isCalc, pretty: pretty };
+  })();
+
+  var Input = (function () {
+    var OPS = '+−×÷', MAXLEN = 120, MAXDIG = 15;
+    function isOp(c) { return c !== '' && OPS.indexOf(c) >= 0; }
+    function isDigit(c) { return c.length === 1 && c >= '0' && c <= '9'; }
+    function tailNum(e) { var m = /\d*\.?\d*$/.exec(e); return m ? m[0] : ''; }
+
+    function press(st, k) {
+      var e = st.expr, fresh = !!st.fresh, sub = st.sub || '', err = '', entry = null, detail = '';
+      var last, tok, idx, b, bb, open, i, r;
+      function startFresh() { if (fresh) { fresh = false; sub = ''; } }
+
+      if (k.length === 1 && k >= '0' && k <= '9') {
+        if (fresh) e = '';
+        startFresh();
+        last = e.slice(-1);
+        if (last === ')' || last === '%') e += '×';
+        tok = tailNum(e);
+        if (tok.replace('.', '').length >= MAXDIG) { /* 位数已满，忽略 */ }
+        else if (tok === '0') { if (k !== '0') e = e.slice(0, -1) + k; }
+        else if (e.length < MAXLEN) e += k;
+      } else {
+        switch (k) {
+          case '.':
+            if (fresh) { e = '0.'; startFresh(); break; }
+            last = e.slice(-1);
+            if (last === ')' || last === '%') { if (e.length < MAXLEN) e += '×0.'; }
+            else {
+              tok = tailNum(e);
+              if (tok.indexOf('.') >= 0) { /* 已有小数点 */ }
+              else if (tok === '') e += '0.';
+              else e += '.';
+            }
+            break;
+
+          case '+': case '−': case '×': case '÷':
+            startFresh();
+            if (e === '') { if (k === '−') e = '−'; break; }
+            last = e.slice(-1);
+            if (last === '(') { if (k === '−') e += k; }
+            else if (isOp(last)) {
+              bb = e.slice(-2, -1);
+              if (k === '−' && (last === '×' || last === '÷')) e += k;
+              else if (last === '−' && (bb === '×' || bb === '÷')) e = e.slice(0, -2) + k;
+              else if (last === '−' && (bb === '' || bb === '(')) { /* 单独的负号，忽略 */ }
+              else e = e.slice(0, -1) + k;
+            } else if (e.length < MAXLEN) e += k;
+            break;
+
+          case '%':
+            startFresh();
+            last = e.slice(-1);
+            if ((isDigit(last) || last === ')' || last === '%' || last === '.') && e.length < MAXLEN) e += '%';
+            break;
+
+          case 'paren':
+            startFresh();
+            if (e.length >= MAXLEN) break;
+            last = e.slice(-1);
+            open = 0;
+            for (i = 0; i < e.length; i++) { if (e.charAt(i) === '(') open++; else if (e.charAt(i) === ')') open--; }
+            if (e === '' || isOp(last) || last === '(') e += '(';
+            else e += open > 0 ? ')' : '×(';
+            break;
+
+          case 'neg':
+            startFresh();
+            if (e === '') { e = '−'; break; }
+            tok = tailNum(e);
+            if (tok !== '') {
+              idx = e.length - tok.length; b = e.charAt(idx - 1); bb = idx >= 2 ? e.charAt(idx - 2) : '';
+              if (b === '−' && (idx - 1 === 0 || isOp(bb) || bb === '(')) e = e.slice(0, idx - 1) + tok;
+              else e = e.slice(0, idx) + '−' + tok;
+            } else {
+              last = e.slice(-1); bb = e.length >= 2 ? e.charAt(e.length - 2) : '';
+              if (last === '−' && (e.length === 1 || isOp(bb) || bb === '(')) e = e.slice(0, -1);
+              else if (isOp(last) || last === '(') e += '−';
+            }
+            break;
+
+          case 'del':
+            startFresh();
+            e = e.slice(0, -1);
+            break;
+
+          case 'ac':
+            e = ''; fresh = false; sub = '';
+            break;
+
+          case '=':
+            r = Engine.evaluate(e);
+            if (r.empty) break;
+            if (!r.ok) { err = r.msg; if (r.code === 'INTERNAL') detail = r.detail || ''; break; }
+            if (Engine.isCalc(r.expr)) { entry = { e: r.expr, r: r.text }; sub = Engine.pretty(r.expr) + ' ='; }
+            else if (!fresh) sub = '';
+            e = r.text.replace('-', '−'); fresh = true;
+            break;
+
+          default: break;
+        }
+      }
+      return { expr: e, fresh: fresh, err: err, sub: sub, entry: entry, detail: detail };
+    }
+
+    function recall(st, text) {
+      var t = String(text).replace('-', '−'), e = st.expr, last = e.slice(-1);
+      if (e === '' || st.fresh || isDigit(last) || last === ')' || last === '%' || last === '.') e = t; else e += t;
+      return { expr: e, fresh: false, err: '', sub: '', entry: null, detail: '' };
+    }
+    return { press: press, recall: recall };
+  })();
+  /* ENGINE-END */
+
+  /* ============ 界面 ============ */
+  var mainEl = $('main'), subEl = $('sub');
+  var st = { expr: '', fresh: false, err: '', sub: '', entry: null, detail: '' };
+  var history = [];
+  var HKEY = 'calc.history.v1', HMAX = 100;
+
+  function validEntry(h) { return h && typeof h.e === 'string' && typeof h.r === 'string' && /^[\d.+−×÷()%\-]+$/.test(h.e); }
+  function loadHistory() {
+    try {
+      var raw = localStorage.getItem(HKEY);
+      if (raw) { var a = JSON.parse(raw); if (Array.isArray(a)) history = a.filter(validEntry).slice(0, HMAX); }
+      Diag.log('INFO', 'app', '历史记录已读取 ' + history.length + ' 条');
+    } catch (e) { history = []; Diag.log('WARN', 'app', '读取历史记录失败: ' + e); }
+  }
+  function saveHistory() {
+    try { localStorage.setItem(HKEY, JSON.stringify(history)); }
+    catch (e) { Diag.log('WARN', 'app', '保存历史记录失败: ' + e); }
+  }
+  function addHistory(entry) {
+    history.unshift({ e: entry.e, r: entry.r, t: Date.now() });
+    if (history.length > HMAX) history.length = HMAX;
+    saveHistory();
+  }
+
+  function fit() {
+    var el = mainEl; el.style.fontSize = '';
+    var size = parseFloat(getComputedStyle(el).fontSize) || 64;
+    while (el.scrollWidth > el.clientWidth + 1 && size > 30) { size -= 2; el.style.fontSize = size + 'px'; }
+    el.scrollLeft = el.scrollWidth;
+  }
+  function render() {
+    try {
+      mainEl.textContent = st.expr === '' ? '0' : Engine.pretty(st.expr);
+      var sub = '', cls = 'sub';
+      if (st.err) { sub = st.err; cls += ' err'; }
+      else if (st.fresh) sub = st.sub;
+      else { var pv = Engine.preview(st.expr); if (pv !== null) sub = '= ' + pv; }
+      subEl.textContent = sub; subEl.className = cls;
+      fit();
+    } catch (e) { Diag.log('ERROR', 'ui', '界面刷新失败: ' + e, e && e.stack); }
+  }
+  function apply(next, label) {
+    var before = st.expr;
+    if (next.entry) { addHistory(next.entry); Diag.log('INFO', 'calc', '计算 ' + next.entry.e + ' = ' + next.entry.r); }
+    if (next.err) {
+      if (next.detail) Diag.log('ERROR', 'calc', '内部计算错误 [' + next.expr + ']: ' + next.detail);
+      else Diag.log('WARN', 'calc', '计算提示「' + next.err + '」算式 ' + next.expr);
+    }
+    st = next; render();
+    return before;
+  }
+  function press(k) {
+    try { Diag.action('按键 ' + k); apply(Input.press(st, k)); }
+    catch (e) { Diag.log('ERROR', 'ui', '按键处理失败 ' + k + ': ' + e, e && e.stack); }
+  }
+
+  /* 历史面板 */
+  var sheet = $('sheet'), backdrop = $('backdrop'), hlist = $('hlist'), btnClear = $('btnClear');
+  var clearArmed = false, clearTimer = null;
+  function two(n) { return n < 10 ? '0' + n : '' + n; }
+  function fmtTime(t) { var d = new Date(t); return two(d.getMonth() + 1) + '-' + two(d.getDate()) + ' ' + two(d.getHours()) + ':' + two(d.getMinutes()); }
+  function renderHistory() {
+    hlist.innerHTML = '';
+    if (!history.length) {
+      var li0 = document.createElement('li'); li0.className = 'h-empty'; li0.textContent = '还没有计算记录'; hlist.appendChild(li0); return;
+    }
+    history.forEach(function (h, i) {
+      var li = document.createElement('li'), b = document.createElement('button');
+      b.type = 'button'; b.className = 'h-item'; b.setAttribute('data-i', String(i));
+      var t = document.createElement('span'); t.className = 'h-t'; t.textContent = fmtTime(h.t || 0);
+      var e = document.createElement('span'); e.className = 'h-e'; e.textContent = Engine.pretty(h.e) + ' =';
+      var r = document.createElement('span'); r.className = 'h-r'; r.textContent = h.r;
+      b.appendChild(t); b.appendChild(e); b.appendChild(r); li.appendChild(b); hlist.appendChild(li);
+    });
+  }
+  function resetClear() { clearArmed = false; clearTimeout(clearTimer); btnClear.textContent = '清空'; }
+  function openSheet() {
+    try {
+      Diag.action('打开历史'); Diag.log('INFO', 'ui', '打开历史面板（' + history.length + ' 条）');
+      renderHistory(); sheet.hidden = false; backdrop.hidden = false; hlist.scrollTop = 0;
+    } catch (e) { Diag.log('ERROR', 'ui', '打开历史失败: ' + e, e && e.stack); }
+  }
+  function closeSheet() { sheet.hidden = true; backdrop.hidden = true; resetClear(); }
+
+  $('btnHistory').addEventListener('click', openSheet);
+  $('btnClose').addEventListener('click', closeSheet);
+  backdrop.addEventListener('click', closeSheet);
+  btnClear.addEventListener('click', function () {
+    try {
+      if (!clearArmed) {
+        clearArmed = true; btnClear.textContent = '再点一次确认';
+        clearTimer = setTimeout(resetClear, 3000); return;
+      }
+      Diag.action('清空历史'); Diag.log('INFO', 'ui', '清空历史记录（原有 ' + history.length + ' 条）');
+      history = []; saveHistory(); resetClear(); renderHistory();
+    } catch (e) { Diag.log('ERROR', 'ui', '清空历史失败: ' + e, e && e.stack); }
+  });
+  hlist.addEventListener('click', function (ev) {
+    try {
+      var b = ev.target.closest ? ev.target.closest('button[data-i]') : null;
+      if (!b) return;
+      var h = history[parseInt(b.getAttribute('data-i'), 10)];
+      if (!h) return;
+      Diag.action('取用历史结果 ' + h.r); Diag.log('INFO', 'ui', '取用历史结果 ' + h.r);
+      apply(Input.recall(st, h.r)); closeSheet();
+    } catch (e) { Diag.log('ERROR', 'ui', '取用历史失败: ' + e, e && e.stack); }
+  });
+
+  /* 按键 */
+  $('app').addEventListener('click', function (ev) {
+    var b = ev.target.closest ? ev.target.closest('button[data-k]') : null;
+    if (b) press(b.getAttribute('data-k'));
+  });
+  document.addEventListener('keydown', function (ev) {
+    try {
+      if (ev.metaKey || ev.ctrlKey || ev.altKey) return;
+      var tag = ev.target && ev.target.tagName;
+      if (tag === 'TEXTAREA' || tag === 'INPUT') return;
+      var k = ev.key, map = { '*': '×', '/': '÷', '-': '−', 'x': '×', 'X': '×', ',': '.', 'Enter': '=', '=': '=', 'Backspace': 'del', '(': 'paren', ')': 'paren', '%': '%', '+': '+', '.': '.' };
+      if (k === 'Escape') { if (!sheet.hidden) closeSheet(); else press('ac'); ev.preventDefault(); return; }
+      if (!sheet.hidden) return;
+      var m = (k.length === 1 && k >= '0' && k <= '9') ? k : map[k];
+      if (m) { ev.preventDefault(); press(m); }
+    } catch (e) { Diag.log('ERROR', 'ui', '键盘处理失败: ' + e, e && e.stack); }
+  });
+
+  /* 诊断快照 */
+  Diag.setSnapshot(function () {
+    var out = [];
+    out.push('当前算式: ' + (st.expr === '' ? '(空)' : st.expr));
+    out.push('刚算完: ' + (st.fresh ? '是' : '否') + ' · 提示: ' + (st.err || '(无)'));
+    out.push('实时预览: ' + (Engine.preview(st.expr) === null ? '(无)' : Engine.preview(st.expr)));
+    out.push('界面字号: ' + mainEl.style.fontSize + ' · 历史面板: ' + (sheet.hidden ? '关闭' : '打开'));
+    out.push('历史条数: ' + history.length + '（上限 ' + HMAX + '）');
+    out.push('最近 5 条历史: ' + (history.slice(0, 5).map(function (h) { return h.e + '=' + h.r; }).join(' ; ') || '(无)'));
+    return out;
+  });
+
+  /* 离线缓存 */
+  function registerSW() {
+    try {
+      if (!('serviceWorker' in navigator)) { Diag.setSW('浏览器不支持或非 https'); Diag.log('WARN', 'sw', '不支持 Service Worker（需要 https 网址）'); return; }
+      navigator.serviceWorker.register('sw.js').then(function (reg) {
+        Diag.setSW('已注册 scope=' + reg.scope); Diag.log('INFO', 'sw', '离线缓存已注册 ' + reg.scope);
+      }, function (e) { Diag.setSW('注册失败: ' + e); Diag.log('WARN', 'sw', '离线缓存注册失败: ' + e); });
+    } catch (e) { Diag.log('ERROR', 'sw', '注册离线缓存时异常: ' + e, e && e.stack); }
+  }
+
+  loadHistory();
+  render();
+  window.addEventListener('load', function () {
+    registerSW();
+    Diag.log('INFO', 'app', '页面加载完成，耗时 ' + Math.round(performance.now()) + 'ms');
+  });
+  window.__calc = { Engine: Engine, Input: Input };   // 仅供自测使用
+  Diag.log('INFO', 'app', '计算器启动 v' + Diag.VERSION);
+})();
+</script>
+</body>
+</html>
