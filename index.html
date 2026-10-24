@@ -9,7 +9,7 @@
 <meta name="apple-mobile-web-app-title" content="计算器">
 <meta name="format-detection" content="telephone=no">
 <meta name="theme-color" content="#0f1115">
-<meta name="app-version" content="1.2.0">
+<meta name="app-version" content="1.3.0">
 <title>计算器</title>
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
@@ -100,7 +100,10 @@ button{font-family:inherit;touch-action:manipulation;-webkit-user-select:none;us
 .h-t{font-size:12px;color:var(--muted)}
 .h-search{padding:8px 14px;border-bottom:1px solid var(--line)}
 .h-search input{width:100%;height:38px;border-radius:19px;border:1px solid var(--line);background:var(--bg);color:var(--fg);padding:0 14px;font-size:16px}
-.notebar{margin-top:6px;max-width:100%}
+.notebar{margin-top:6px;max-width:100%;display:flex;justify-content:flex-end;gap:8px}
+.note-btn{flex:0 1 auto;min-width:0}
+.note-btn.copy{flex:0 0 auto;border-style:solid;border-color:var(--line);background:var(--key-fn);color:var(--fg)}
+.h-acts{display:flex;gap:8px}
 .note-btn{min-height:34px;max-width:100%;padding:0 12px;border-radius:17px;border:1px dashed var(--accent2);background:transparent;color:var(--accent2);font-size:14px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .note-btn.has{border-style:solid;background:var(--key-fn);color:var(--fg)}
 .backdrop.nb{z-index:24}
@@ -157,7 +160,7 @@ button{font-family:inherit;touch-action:manipulation;-webkit-user-select:none;us
     <span class="ver" id="ver"></span>
     <div class="sub" id="sub"></div>
     <div class="main" id="main">0</div>
-    <div class="notebar" id="notebar" hidden><button type="button" class="note-btn" id="btnNote">＋ 备注</button></div>
+    <div class="notebar" id="notebar" hidden><button type="button" class="note-btn copy" id="btnCopy" aria-label="复制算式和结果">复制</button><button type="button" class="note-btn" id="btnNote">＋ 备注</button></div>
   </main>
 
   <section class="keys" id="keys" aria-label="计算器按键">
@@ -226,10 +229,6 @@ button{font-family:inherit;touch-action:manipulation;-webkit-user-select:none;us
       <button type="button" role="switch" aria-checked="true" aria-label="按键音" class="switch" id="swSound"></button>
     </div>
     <div class="set-row">
-      <div><div class="set-t">按键震动</div><div class="set-d">借用 iPhone 系统自带的轻触反馈，部分系统版本可能没有效果。</div></div>
-      <button type="button" role="switch" aria-checked="true" aria-label="按键震动" class="switch" id="swHaptic"></button>
-    </div>
-    <div class="set-row">
       <div><div class="set-t">导出历史和备注</div><div class="set-d">复制成一段文字，可粘贴到备忘录保存。删掉主屏幕图标或换手机，记录会丢失。</div></div>
       <button type="button" class="bar-btn" id="btnExport">复制</button>
     </div>
@@ -244,7 +243,7 @@ button{font-family:inherit;touch-action:manipulation;-webkit-user-select:none;us
 <script>
 (function () {
   'use strict';
-  var VERSION = '1.2.0';
+  var VERSION = '1.3.0';
   var APP = '计算器';
   var MAX_LOG = 200, MAX_ACT = 60, MAX_ERR = 20;
   var STORE_KEY = 'calc.diag.v1';
@@ -962,13 +961,13 @@ button{font-family:inherit;touch-action:manipulation;-webkit-user-select:none;us
     catch (e) { Diag.log('ERROR', 'ui', '按键处理失败 ' + k + ': ' + e, e && e.stack); }
   }
 
-  /* ===== 设置、按键音、震动 ===== */
+  /* ===== 设置、按键音 ===== */
   var SKEY = 'calc.settings.v1';
-  var settings = { sound: true, haptic: true };
+  var settings = { sound: true };
   function loadSettings() {
     try {
       var raw = localStorage.getItem(SKEY);
-      if (raw) { var o = JSON.parse(raw); if (o && typeof o === 'object') { settings.sound = o.sound !== false; settings.haptic = o.haptic !== false; } }
+      if (raw) { var o = JSON.parse(raw); if (o && typeof o === 'object') { settings.sound = o.sound !== false; } }
     } catch (e) { Diag.log('WARN', 'app', '读取设置失败: ' + e); }
   }
   function saveSettings() {
@@ -1002,34 +1001,14 @@ button{font-family:inherit;touch-action:manipulation;-webkit-user-select:none;us
       o.connect(g); g.connect(c.destination); o.start(t); o.stop(t + 0.07);
     }
   };
-  var Haptic = {
-    mode: 'none', label: null, init: function () {
-      try {
-        if (typeof navigator.vibrate === 'function') { this.mode = 'vibrate'; return; }
-        var lab = document.createElement('label'), inp = document.createElement('input');
-        inp.type = 'checkbox'; inp.setAttribute('switch', ''); inp.tabIndex = -1; inp.setAttribute('aria-hidden', 'true');
-        lab.setAttribute('aria-hidden', 'true');
-        lab.style.cssText = 'position:fixed;left:0;top:0;width:1px;height:1px;opacity:0;overflow:hidden;pointer-events:none;';
-        lab.appendChild(inp); document.body.appendChild(lab);
-        this.label = lab; this.mode = 'switch';
-      } catch (e) { this.mode = 'none'; Diag.log('WARN', 'haptic', '震动初始化失败: ' + e); }
-    },
-    tap: function () {
-      if (this.mode === 'vibrate') navigator.vibrate(8);
-      else if (this.mode === 'switch' && this.label) this.label.click();
-    }
-  };
   function feedback(k) {
     try { if (settings.sound) Sound.tick(k); } catch (e) { Diag.log('ERROR', 'sound', '按键音出错: ' + e, e && e.stack); }
-    try { if (settings.haptic) Haptic.tap(); } catch (e2) { Diag.log('ERROR', 'haptic', '震动出错: ' + e2, e2 && e2.stack); }
   }
 
-  var setSheet = $('setSheet'), swSound = $('swSound'), swHaptic = $('swHaptic');
+  var setSheet = $('setSheet'), swSound = $('swSound');
   function renderSettings() {
     swSound.setAttribute('aria-checked', settings.sound ? 'true' : 'false');
-    swHaptic.setAttribute('aria-checked', settings.haptic ? 'true' : 'false');
-    $('setInfo').textContent = '版本 v' + Diag.VERSION + ' · 震动方式：' +
-      (Haptic.mode === 'vibrate' ? '系统震动' : Haptic.mode === 'switch' ? '系统轻触反馈（iOS）' : '不可用');
+    $('setInfo').textContent = '版本 v' + Diag.VERSION;
   }
   swSound.addEventListener('click', function () {
     try {
@@ -1037,13 +1016,6 @@ button{font-family:inherit;touch-action:manipulation;-webkit-user-select:none;us
       Diag.action('按键音 ' + (settings.sound ? '开' : '关')); Diag.log('INFO', 'ui', '按键音 ' + (settings.sound ? '开' : '关'));
       if (settings.sound) Sound.tick('1');
     } catch (e) { Diag.log('ERROR', 'ui', '切换按键音失败: ' + e, e && e.stack); }
-  });
-  swHaptic.addEventListener('click', function () {
-    try {
-      settings.haptic = !settings.haptic; saveSettings(); renderSettings();
-      Diag.action('按键震动 ' + (settings.haptic ? '开' : '关')); Diag.log('INFO', 'ui', '按键震动 ' + (settings.haptic ? '开' : '关'));
-      if (settings.haptic) Haptic.tap();
-    } catch (e) { Diag.log('ERROR', 'ui', '切换震动失败: ' + e, e && e.stack); }
   });
 
   /* 历史面板 */
@@ -1065,8 +1037,12 @@ button{font-family:inherit;touch-action:manipulation;-webkit-user-select:none;us
       var li = document.createElement('li'); li.className = 'h-li';
       var top = document.createElement('div'); top.className = 'h-top';
       var t = document.createElement('span'); t.className = 'h-t'; t.textContent = fmtTime(h.t || 0);
+      var acts = document.createElement('div'); acts.className = 'h-acts';
+      var cb = document.createElement('button'); cb.type = 'button'; cb.className = 'h-nb'; cb.setAttribute('data-c', h.id); cb.textContent = '复制';
+      cb.setAttribute('aria-label', '复制这条算式和结果');
       var nb = document.createElement('button'); nb.type = 'button'; nb.className = 'h-nb'; nb.setAttribute('data-n', h.id); nb.textContent = h.n ? '改备注' : '＋ 备注';
-      top.appendChild(t); top.appendChild(nb); li.appendChild(top);
+      acts.appendChild(cb); acts.appendChild(nb);
+      top.appendChild(t); top.appendChild(acts); li.appendChild(top);
       if (h.n) { var nn = document.createElement('div'); nn.className = 'h-note'; nn.textContent = h.n; li.appendChild(nn); }
       var b = document.createElement('button'); b.type = 'button'; b.className = 'h-item'; b.setAttribute('data-id', h.id);
       var e = document.createElement('span'); e.className = 'h-e'; e.textContent = Engine.pretty(h.e) + ' =';
@@ -1164,6 +1140,8 @@ button{font-family:inherit;touch-action:manipulation;-webkit-user-select:none;us
   });
   hlist.addEventListener('click', function (ev) {
     try {
+      var cbtn = ev.target.closest ? ev.target.closest('button[data-c]') : null;
+      if (cbtn) { var ch0 = findById(cbtn.getAttribute('data-c')); if (ch0) copyEntry(ch0, '历史'); return; }
       var nbtn = ev.target.closest ? ev.target.closest('button[data-n]') : null;
       if (nbtn) { openNote(nbtn.getAttribute('data-n')); return; }
       var b = ev.target.closest ? ev.target.closest('button[data-id]') : null;
@@ -1173,6 +1151,30 @@ button{font-family:inherit;touch-action:manipulation;-webkit-user-select:none;us
       Diag.action('取用历史结果 ' + h.r); Diag.log('INFO', 'ui', '取用历史结果 ' + h.r);
       apply(Input.recall(st, h.r)); closeSheet();
     } catch (e) { Diag.log('ERROR', 'ui', '取用历史失败: ' + e, e && e.stack); }
+  });
+
+  /* 复制“算式 = 结果”，同一行，不带回车 */
+  function calcText(h) { return Engine.pretty(h.e).replace(/\u2009/g, ' ') + ' = ' + h.r; }
+  function copyEntry(h, where) {
+    try {
+      var text = calcText(h);
+      Diag.action('复制算式和结果(' + where + ')'); Diag.log('INFO', 'ui', '复制(' + where + ') ' + text);
+      Diag.share(text, '已复制：' + text, '自动复制没成功。请点“全选”，再点弹出的“拷贝”。');
+    } catch (e) { Diag.log('ERROR', 'ui', '复制失败: ' + e, e && e.stack); }
+  }
+  $('btnCopy').addEventListener('click', function () { var h = curId ? findById(curId) : null; if (h) copyEntry(h, '结果旁'); });
+  /* 手动选中显示区文字再“拷贝”时，也把换行/特殊空格规整成普通空格，免得等号和结果之间被断行 */
+  document.addEventListener('copy', function (ev) {
+    try {
+      var sel = window.getSelection ? window.getSelection() : null;
+      if (!sel || sel.isCollapsed || !ev.clipboardData) return;
+      var box = $('display');
+      if (!(box.contains(sel.anchorNode) || box.contains(sel.focusNode))) return;
+      var txt = sel.toString().replace(/[\u2009\u00a0]/g, ' ').replace(/\s+/g, ' ').trim();
+      if (!txt) return;
+      ev.clipboardData.setData('text/plain', txt); ev.preventDefault();
+      Diag.log('INFO', 'ui', '复制显示区选中文字: ' + txt);
+    } catch (e) { Diag.log('ERROR', 'ui', '规整选中复制失败: ' + e, e && e.stack); }
   });
 
   /* 导出历史和备注 */
@@ -1217,8 +1219,7 @@ button{font-family:inherit;touch-action:manipulation;-webkit-user-select:none;us
     out.push('面板: 历史 ' + (sheet.hidden ? '关闭' : '打开') + ' · 设置 ' + (setSheet.hidden ? '关闭' : '打开') + ' · 备注框 ' + (noteDlg.hidden ? '关闭' : '打开'));
     out.push('历史条数: ' + history.length + '（无备注的上限 ' + HMAX + '，总上限 ' + HHARD + '）· 带备注: ' + noteCount() + ' 条（内容不写入报告）');
     out.push('当前结果可加备注: ' + (notebar.hidden ? '否' : '是') + ' · 备注条: ' + (notebar.hidden ? '隐藏' : (findById(curId) && findById(curId).n ? '已有备注' : '无备注')));
-    out.push('按键音设置: ' + (settings.sound ? '开' : '关') + ' · 音频状态: ' + (Sound.failed ? '不可用' : Sound.ctx ? Sound.ctx.state : '未启动') +
-      ' · 震动设置: ' + (settings.haptic ? '开' : '关') + ' · 震动方式: ' + Haptic.mode);
+    out.push('按键音设置: ' + (settings.sound ? '开' : '关') + ' · 音频状态: ' + (Sound.failed ? '不可用' : Sound.ctx ? Sound.ctx.state : '未启动'));
     out.push('算式显示: 字号 ' + (mainEl.style.fontSize || '默认') + ' · 内容高度 ' + mainEl.scrollHeight + '/可视 ' + mainEl.clientHeight + ' · 滚动兜底: ' + (mainEl.classList.contains('crush') ? '是' : '否'));
     out.push('最近 5 条历史: ' + (history.slice(0, 5).map(function (h) { return h.e + '=' + h.r + (h.n ? '[有备注]' : ''); }).join(' ; ') || '(无)'));
     return out;
@@ -1244,9 +1245,8 @@ button{font-family:inherit;touch-action:manipulation;-webkit-user-select:none;us
   }
 
   loadSettings();
-  Haptic.init();
   loadHistory();
-  Diag.log('INFO', 'app', '设置: 按键音=' + settings.sound + ' 震动=' + settings.haptic + ' 震动方式=' + Haptic.mode);
+  Diag.log('INFO', 'app', '设置: 按键音=' + settings.sound);
   render();
   window.addEventListener('load', function () {
     registerSW();

@@ -1,5 +1,5 @@
 /* 计算器 Service Worker：让它断网也能打开。每次发新版请同步修改 VERSION。 */
-var VERSION = '1.2.0';
+var VERSION = '1.3.0';
 var CACHE = 'calc-' + VERSION;
 var ASSETS = ['./', 'index.html', 'manifest.webmanifest', 'icon-192.png', 'icon-512.png', 'apple-touch-icon.png'];
 
